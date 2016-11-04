@@ -1,0 +1,43 @@
+Name:  {SnapName*:DB_PROGISTICS_DLT-SQL_20150112}
+Description:
+Creation time:  {CreationTime:01/12/16 19:27:04}
+Source LUN(s):  {SourceLUNID:1080}
+Source CG:  N/A
+State:  Ready
+Allow Read/Write:  Yes
+Modified:  Yes
+Allow auto delete:  Yes
+Expiration date:  Never
+
+Name:  {SnapName*:DB_Shipping_DLT-SQL_20160304}
+Description:
+Creation time:  {CreationTime:03/04/16 23:01:17}
+Source LUN(s):  {SourceLUNID:1001}
+Source CG:  N/A
+State:  Ready
+Allow Read/Write:  Yes
+Modified:  Yes
+Allow auto delete:  Yes
+Expiration date:  Never
+
+Name:  {SnapName*:Navision=RO-20150419}
+Description:
+Creation time:  {CreationTime:04/19/15 18:14:36}
+Source LUN(s):  {SourceLUNID:18}
+Source CG:  N/A
+State:  Ready
+Allow Read/Write:  Yes
+Modified:  Yes
+Allow auto delete:  Yes
+Expiration date:  Never
+
+Name:  {SnapName*:Navision-20150419}
+Description:
+Creation time:  {CreationTime:04/19/15 18:14:38}
+Source LUN(s):  {SourceLUNID:18}
+Source CG:  N/A
+State:  Ready
+Allow Read/Write:  Yes
+Modified:  Yes
+Allow auto delete:  Yes
+Expiration date:  Never
