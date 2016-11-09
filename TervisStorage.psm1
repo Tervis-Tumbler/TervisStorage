@@ -36,14 +36,19 @@ function Get-LUNSFromVNX {
 function Get-SnapshotsFromVNX{
     param(
         [Parameter(Mandatory)]
-        [ValidateSet(“VNX5200”,”VNX5300")]
+        [ValidateSet(“VNX5200”,”VNX5300","ALL")]
         $TervisStorageArraySelection
     )
-    $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $TervisStorageArraySelection
-    $TervisStorageArrayPasswordDetails = Get-PasswordstateEntryDetails -PasswordID $TervisStorageArrayDetails.PasswordstateCredentialID
-
-    $RawSnapshotOutput = & 'c:\program files\emc\naviseccli.exe' -scope 0 -h $TervisStorageArrayDetails.IPAddress -user $TervisStorageArrayPasswordDetails.Username -password $TervisStorageArrayPasswordDetails.Password snap -list
-    $RawSnapshotOutput | ConvertFrom-String -TemplateFile $PSScriptRoot\VNX_Snapshotlist_Template
+    if($TervisStorageArraySelection -eq "ALL"){
+        $SanSelectionList = "vnx5200","vnx5300"
+    }
+    else{$SanSelectionList = $TervisStorageArraySelection}
+    foreach ($Array in $SanSelectionList){
+        $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $Array
+        $TervisStorageArrayPasswordDetails = Get-PasswordstateEntryDetails -PasswordID $TervisStorageArrayDetails.PasswordstateCredentialID
+        $RawSnapshotOutput = & 'c:\program files\emc\naviseccli.exe' -scope 0 -h $TervisStorageArrayDetails.IPAddress -user $TervisStorageArrayPasswordDetails.Username -password $TervisStorageArrayPasswordDetails.Password snap -list
+        $RawSnapshotOutput | ConvertFrom-String -TemplateFile $PSScriptRoot\VNX_Snapshotlist_Template
+    }
 }
 
 function New-VNXLUNSnapshot{
@@ -63,7 +68,45 @@ function New-VNXLUNSnapshot{
 
     $command = "& 'c:\program files\EMC\NaviSECCli.exe' -user $($TervisStorageArrayPasswordDetails.Username) -password $($TervisStorageArrayPasswordDetails.Password) -scope 0 -h $($TervisStorageArrayDetails.IPAddress) snap -create -res $($LUNID) -name $SnapshotName"
     Invoke-Expression -Command $Command
-    $Command
 }
 
+function Mount-VNXSnapshot{
+    param(
+        [Parameter(Mandatory)]
+        $SMPID,
+
+        [Parameter(Mandatory)]
+        $SnapshotName,
+
+        [Parameter(Mandatory)]
+        [ValidateSet(“VNX5200”,”VNX5300")]
+        $TervisStorageArraySelection
+    )
+    $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $TervisStorageArraySelection
+    $TervisStorageArrayPasswordDetails = Get-PasswordstateCredential -PasswordID $TervisStorageArrayDetails.PasswordstateCredentialID -AsPlainText
+
+    $command = "& 'c:\program files\EMC\NaviSECCli.exe' -user $($TervisStorageArrayPasswordDetails.Username) -password $($TervisStorageArrayPasswordDetails.Password) -scope 0 -h $($TervisStorageArrayDetails.IPAddress) snap -modify -id $snapshotname -allowReadWrite yes"
+    Invoke-Expression -Command $Command
+    $command = "& 'c:\program files\EMC\NaviSECCli.exe' -user $($TervisStorageArrayPasswordDetails.Username) -password $($TervisStorageArrayPasswordDetails.Password) -scope 0 -h $($TervisStorageArrayDetails.IPAddress) lun -attach -l $SMPID -snapname $snapshotname"
+    Invoke-Expression -Command $Command
+    $command = "& 'c:\program files\EMC\NaviSECCli.exe' -user $($TervisStorageArrayPasswordDetails.Username) -password $($TervisStorageArrayPasswordDetails.Password) -scope 0 -h $($TervisStorageArrayDetails.IPAddress) snap -list -id $snapshotname -detail"
+    Invoke-Expression -Command $Command
+
+}
+
+function Dismount-VNXSnapshot{
+    param(
+        [Parameter(Mandatory)]
+        $SMPID,
+
+        [Parameter(Mandatory)]
+        [ValidateSet(“VNX5200”,”VNX5300")]
+        $TervisStorageArraySelection
+    )
+    $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $TervisStorageArraySelection
+    $TervisStorageArrayPasswordDetails = Get-PasswordstateCredential -PasswordID $TervisStorageArrayDetails.PasswordstateCredentialID -AsPlainText
+
+    $command = "& 'c:\program files\EMC\NaviSECCli.exe' -user $($TervisStorageArrayPasswordDetails.Username) -password $($TervisStorageArrayPasswordDetails.Password) -scope 0 -h $($TervisStorageArrayDetails.IPAddress) lun -detach -l $SMPID"
+    Invoke-Expression -Command $Command
+}
 
