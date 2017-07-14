@@ -11,11 +11,73 @@
 
 function Get-TervisStorageArrayDetails{
     param(
-        [Parameter(Mandatory)][ValidateSet(“VNX5200”,”VNX5300”)][String]$StorageArrayName
+        [Parameter(Mandatory)][ValidateSet(“VNX5200”,”VNX5300”)][String]$StorageArrayName,
+        [Parameter()][ValidateSet(“SPA”,”SPB”)][string]$StorageProcessor = "SPA"
+#        $StorageProcessor = "SPA"
     )
     $StorageArrayInfo = $TervisStorageArrayInfo | Where name -EQ $StorageArrayName
+    $TervisStorageArrayPasswordDetails = Get-PasswordstateEntryDetails -PasswordID $StorageArrayInfo.PasswordstateCredentialID
+    if ($StorageProcessor -eq "SPA") {$SPIPAddress = $TervisStorageArrayPasswordDetails.GenericField1}
+    if ($StorageProcessor -eq "SPB") {$SPIPAddress = $TervisStorageArrayPasswordDetails.GenericField2}
+
     $StorageArrayInfo | Add-Member -MemberType ScriptProperty -Name IPAddress -Value {(Resolve-DnsName -Name $this.Hostname).IPAddress} -Force
+    $StorageArrayInfo | Add-Member -MemberType NoteProperty -Name SPIPAddress -Value $SPIPAddress -Force
     $StorageArrayInfo
+
+}
+
+function Get-VNXFileList {
+    param (
+        [Parameter(Mandatory)][ValidateSet(“VNX5200”,”VNX5300”)][String]$StorageArrayName,
+        [Parameter(Mandatory)][ValidateSet(“SPA”,”SPB”)]$StorageProcessor,
+        [Switch]$Today
+    )
+    $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $StorageArrayName -StorageProcessor $StorageProcessor
+    $TervisStorageArrayPasswordDetails = Get-PasswordstateEntryDetails -PasswordID $TervisStorageArrayDetails.PasswordstateCredentialID
+    $RawGetFileListOutput = & 'c:\program files\emc\naviseccli.exe' -scope 0 -h $($TervisStorageArrayDetails.SPIPAddress) -user $($TervisStorageArrayPasswordDetails.Username) -password $($TervisStorageArrayPasswordDetails.Password) managefiles -list
+    $SPFileList = $RawGetFileListOutput | ConvertFrom-String -TemplateFile $PSScriptRoot\VNX_GetFileList_Template
+    if ($Today) {
+        $SPFileList | Where-Object Timestamp -ge (get-date).AddDays(-1) | Sort-Object -Property timestamp -Descending
+    }
+    else { $SPFileList | Sort-Object -Property timestamp -Descending }
+}
+
+function invoke-GenerateVNXSPCollect {
+    param (
+        [Parameter(Mandatory)][ValidateSet(“VNX5200”,”VNX5300”)][String]$StorageArrayName,
+        [Parameter(Mandatory)][ValidateSet(“SPA”,”SPB”)]$StorageProcessor
+    )
+    $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $StorageArrayName -StorageProcessor $StorageProcessor
+    $TervisStorageArrayPasswordDetails = Get-PasswordstateEntryDetails -PasswordID $TervisStorageArrayDetails.PasswordstateCredentialID
+
+    Invoke-Command -ScriptBlock {& 'c:\program files\emc\naviseccli.exe' -scope 0 -h $($TervisStorageArrayDetails.SPIPAddress) -user $($TervisStorageArrayPasswordDetails.Username) -password $($TervisStorageArrayPasswordDetails.Password) spcollect}
+#    & 'c:\program files\emc\naviseccli.exe' -scope 0 -h $TervisStorageArrayPasswordDetails.GenericField2 -user $TervisStorageArrayPasswordDetails.Username -password $TervisStorageArrayPasswordDetails.Password naviseccli spcollect
+}
+
+function Get-VNXArrayFaults {
+    param (
+        [Parameter(Mandatory)][ValidateSet(“VNX5200”,”VNX5300”)][String]$StorageArrayName,
+        [Parameter(Mandatory)][ValidateSet(“SPA”,”SPB”)]$StorageProcessor
+    )
+    $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $StorageArrayName    
+    $TervisStorageArrayPasswordDetails = Get-PasswordstateEntryDetails -PasswordID $TervisStorageArrayDetails.PasswordstateCredentialID
+
+    Invoke-Command -ScriptBlock {& 'c:\program files\emc\naviseccli.exe' -scope 0 -h $($TervisStorageArrayDetails.SPIPAddress) -user $($TervisStorageArrayPasswordDetails.Username) -password $($TervisStorageArrayPasswordDetails.Password) -faults -list}
+#    & 'c:\program files\emc\naviseccli.exe' -scope 0 -h $TervisStorageArrayPasswordDetails.GenericField2 -user $TervisStorageArrayPasswordDetails.Username -password $TervisStorageArrayPasswordDetails.Password spcollect
+}
+
+function Get-SPLogFilesFromVNX{
+    param (
+        [Parameter(Mandatory)][ValidateSet(“VNX5200”,”VNX5300”)][String]$StorageArrayName,
+        [Parameter(Mandatory)][ValidateSet(“SPA”,”SPB”)]$StorageProcessor,
+        [Parameter(Mandatory)]$FileName,
+        [Parameter(Mandatory)]$DestinationPath
+    )
+    $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $StorageArrayName -StorageProcessor $StorageProcessor
+    $TervisStorageArrayPasswordDetails = Get-PasswordstateEntryDetails -PasswordID $TervisStorageArrayDetails.PasswordstateCredentialID
+
+    Invoke-Command -ScriptBlock {& 'c:\program files\emc\naviseccli.exe' -scope 0 -h $($TervisStorageArrayDetails.SPIPAddress) -user $($TervisStorageArrayPasswordDetails.Username) -password $($TervisStorageArrayPasswordDetails.Password) managefiles -retrieve -path $DestinationPath -file $FileName -o}
+#    & 'c:\program files\emc\naviseccli.exe' -scope 0 -h $TervisStorageArrayPasswordDetails.GenericField2 -user $TervisStorageArrayPasswordDetails.Username -password $TervisStorageArrayPasswordDetails.Password spcollect
 }
 
 function Get-LUNSFromVNX {
@@ -223,7 +285,8 @@ function Register-UnisphereHost {
         [ValidateSet('VNX5300','VNX2','ALL')]
         $SANSelection,
       [Parameter(Mandatory=$true)]
-        [string]$IPAddress
+        [string]$IPAddress,
+      [switch]$ScriptOnly
     
       )
     
@@ -311,7 +374,12 @@ function Register-UnisphereHost {
             }
     }
     write-host "`nRegistering initiators with selected SANs`n"
-    Invoke-Expression -Command $Command
+    if($scriptonly){
+        $Command
+    }
+    else{
+        Invoke-Expression -Command $Command
+    }
 }
 
 function Set-BrocadeZoning {
