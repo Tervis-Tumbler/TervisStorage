@@ -383,25 +383,28 @@ function Register-UnisphereHost {
 }
 
 function Set-BrocadeZoning {
-  <#
-      .SYNOPSIS
-       Retrieves initiator information from pipeline object and outputs zoning script for use in the Brocade CLI (SSH)
-      .DESCRIPTION
-      Outputs scripts to run in Brocade CLI to configure zoning for target system
-      .EXAMPLE
-      Get-VMWWN TestVM | Register-UnisphereHost -SanSelection VNX2
-      Gets initiator information for Hyper-V guest TestVM and outputs the scripted Brocade commands that need to be pasted into the Brocade CLI to zone Test-VM to the VNX5200.
-      .PARAMETER $FabricDetail
-      Resulting input object from get-vmwwn command. Contains Hostname, WWN, WWPN and WWNN used to zone target host.
-      #>
-    
+    [CmdletBinding()]
       param
       (
-      [Parameter(Mandatory=$true,
-        ValueFromPipeline=$true)] $FabricDetail,
-      [Parameter(Mandatory=$true)]
-      [ValidateSet('VNX5300','VNX2','CX3-20','MD3860F-HQ','MD3860F-P10','ALL')]$SANSelection
+    [Parameter(Mandatory, ValueFromPipeline, ParameterSetName = "VMZoning")]$FabricDetail,
+
+    [Parameter(Mandatory, ParameterSetName = "PhysicalServerZoning")]$Hostname,          
+
+    [Parameter(Mandatory, ParameterSetName = "PhysicalServerZoning")]$FabricAWWPN,
+    [Parameter(Mandatory, ParameterSetName = "PhysicalServerZoning")]$FabricBWWPN,
+
+    [Parameter(Mandatory, ParameterSetName = "PhysicalServerZoning")]
+    [Parameter(Mandatory, ParameterSetName = "VMZoning")]
+    [ValidateSet('VNX5300','VNX2','CX3-20','MD3860F-HQ','MD3860F-P10','ALL')]$SANSelection
       )
+
+        if (-not $FabricDetail){
+            $FabricDetail = [PSCustomObject][Ordered] @{
+                Hostname = $Hostname
+                FabricAWWNSetA = $FabricAWWPN
+                FabricBWWNSetA = $FabricBWWPN
+            }
+        }
     
         if($FabricDetail.FabricAWWNSetB)
         {
@@ -409,7 +412,8 @@ function Set-BrocadeZoning {
         }
         Else
         {
-            $InitiatorAWWN = $FabricDetail.FabricAWWPNSetA
+            
+            $InitiatorAWWN = $FabricAWWPN
         }
         if($FabricDetail.FabricBWWNSetB)
         {
@@ -417,7 +421,7 @@ function Set-BrocadeZoning {
         }
         Else
         {
-            $InitiatorBWWN = $FabricDetail.FabricBWWPNSetA
+            $InitiatorBWWN = $FabricBWWPN
         }
     
         switch ($SanSelection)
