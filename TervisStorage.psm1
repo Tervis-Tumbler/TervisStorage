@@ -499,19 +499,10 @@ function Invoke-ClaimMPOI {
     param (
         [Parameter(Mandatory,ValueFromPipelineByPropertyName)]$ComputerName
     )
-    $CurrentMPIOClaims = Invoke-Command -ComputerName $ComputerName -ScriptBlock {mpclaim.exe -e}
-    if (-NOT ($CurrentMPIOClaims -Match "DELL" -or $CurrentMPIOClaims -Match "DGC")) {
-        Invoke-Command -ComputerName $ComputerName -ScriptBlock {
-            mpclaim.exe -n -i -d "DGC     RAID 3          "
-            mpclaim.exe -n -i -d "DGC     RAID 5          "
-            mpclaim.exe -n -i -d "DGC     RAID 1          "
-            mpclaim.exe -n -i -d "DGC     RAID 0          "
-            mpclaim.exe -n -i -d "DGC     RAID 10         "
-            mpclaim.exe -n -i -d "DGC     VRAID           "
-            mpclaim.exe -n -i -d "DGC     DISK            "
-            mpclaim.exe -n -i -d "DGC     LUNZ            "
-            mpclaim.exe -n -i -d "DELL    MD38xxf         "
-            mpclaim.exe -n -i -d "DELL    Universal Xport "
+    Invoke-Command -ComputerName $ComputerName -ScriptBlock {
+        $SupportedHardware = Get-MPIOAvailableHW | Where IsMultipathed -eq $false
+        if ($SupportedHardware) {
+            Update-MPIOClaimedHW
         }
     }
 }
