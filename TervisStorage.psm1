@@ -510,6 +510,8 @@ function Invoke-ClaimMPOI {
             mpclaim.exe -n -i -d "DGC     VRAID           "
             mpclaim.exe -n -i -d "DGC     DISK            "
             mpclaim.exe -n -i -d "DGC     LUNZ            "
+            mpclaim.exe -n -i -d "DELL    MD38xxf         "
+            mpclaim.exe -n -i -d "DELL    Universal Xport "
         }
     }
 }
