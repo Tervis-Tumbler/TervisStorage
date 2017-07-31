@@ -502,7 +502,18 @@ function Invoke-ClaimMPOI {
     Invoke-Command -ComputerName $ComputerName -ScriptBlock {
         $SupportedHardware = Get-MPIOAvailableHW | Where IsMultipathed -eq $false
         if ($SupportedHardware) {
-            Update-MPIOClaimedHW
+            Invoke-Command -ComputerName $ComputerName -ScriptBlock {
+                mpclaim.exe -n -i -d "DGC     RAID 3          "
+                mpclaim.exe -n -i -d "DGC     RAID 5          "
+                mpclaim.exe -n -i -d "DGC     RAID 1          "
+                mpclaim.exe -n -i -d "DGC     RAID 0          "
+                mpclaim.exe -n -i -d "DGC     RAID 10         "
+                mpclaim.exe -n -i -d "DGC     VRAID           "
+                mpclaim.exe -n -i -d "DGC     DISK            "
+                mpclaim.exe -n -i -d "DGC     LUNZ            "
+                mpclaim.exe -n -i -d "DELL    MD38xxf         "
+                mpclaim.exe -n -i -d "DELL    Universal Xport "
+            }
             Restart-Computer -ComputerName $ComputerName
             Wait-ForNodeRestart -ComputerName $ComputerName
         }
