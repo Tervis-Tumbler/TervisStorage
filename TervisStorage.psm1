@@ -503,6 +503,8 @@ function Invoke-ClaimMPOI {
         $SupportedHardware = Get-MPIOAvailableHW | Where IsMultipathed -eq $false
         if ($SupportedHardware) {
             Update-MPIOClaimedHW
+            Restart-Computer -ComputerName $ComputerName
+            Wait-ForNodeRestart -ComputerName $ComputerName
         }
     }
 }
