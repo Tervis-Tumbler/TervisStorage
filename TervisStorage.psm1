@@ -514,8 +514,7 @@ function Invoke-ClaimMPOI {
                 mpclaim.exe -n -i -d "DELL    MD38xxf         "
                 mpclaim.exe -n -i -d "DELL    Universal Xport "
             }
-            Restart-Computer -ComputerName $ComputerName
-            Wait-ForNodeRestart -ComputerName $ComputerName
+            Restart-Computer -ComputerName $ComputerName -Wait
         }
     }
 }
