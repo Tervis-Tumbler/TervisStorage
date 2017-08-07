@@ -518,22 +518,42 @@ function Invoke-ClaimMPOI {
         [Parameter(Mandatory,ValueFromPipelineByPropertyName)]$ComputerName
     )
     Invoke-Command -ComputerName $ComputerName -ScriptBlock {
-        $SupportedHardware = Get-MPIOAvailableHW | Where IsMultipathed -eq $false
+        $MSDSMList = Get-MSDSMSupportedHW
+        if (-NOT ($MSDSMList | Where {$_.VendorId -eq "DGC" -and $_.ProductId -eq "Raid 3"})) {
+            New-MSDSMSupportedHW -VendorId DGC -ProductId "Raid 3"
+        }
+        if (-NOT ($MSDSMList | Where {$_.VendorId -eq "DGC" -and $_.ProductId -eq "Raid 5"})) {
+            New-MSDSMSupportedHW -VendorId DGC -ProductId "Raid 5"
+        }
+        if (-NOT ($MSDSMList | Where {$_.VendorId -eq "DGC" -and $_.ProductId -eq "Raid 1"})) {
+            New-MSDSMSupportedHW -VendorId DGC -ProductId "Raid 1"
+        }
+        if (-NOT ($MSDSMList | Where {$_.VendorId -eq "DGC" -and $_.ProductId -eq "Raid 0"})) {
+            New-MSDSMSupportedHW -VendorId DGC -ProductId "Raid 0"
+        }
+        if (-NOT ($MSDSMList | Where {$_.VendorId -eq "DGC" -and $_.ProductId -eq "Raid 10"})) {
+            New-MSDSMSupportedHW -VendorId DGC -ProductId "Raid 10"
+        }
+        if (-NOT ($MSDSMList | Where {$_.VendorId -eq "DGC" -and $_.ProductId -eq "VRAID"})) {
+            New-MSDSMSupportedHW -VendorId DGC -ProductId VRAID
+        }
+        if (-NOT ($MSDSMList | Where {$_.VendorId -eq "DGC" -and $_.ProductId -eq "DISK"})) {
+            New-MSDSMSupportedHW -VendorId DGC -ProductId DISK
+        }
+        if (-NOT ($MSDSMList | Where {$_.VendorId -eq "DGC" -and $_.ProductId -eq "LUNZ"})) {
+            New-MSDSMSupportedHW -VendorId DGC -ProductId LUNZ
+        }
+        if (-NOT ($MSDSMList | Where {$_.VendorId -eq "DELL" -and $_.ProductId -eq "MD38xxf"})) {
+            New-MSDSMSupportedHW -VendorId DELL -ProductId MD38xxf
+        }
+        if (-NOT ($MSDSMList | Where {$_.VendorId -eq "DELL" -and $_.ProductId -eq "Universal Xport"})) {
+            New-MSDSMSupportedHW -VendorId DELL -ProductId "Universal Xport"
+        }
+        $SupportedHardware = Get-MPIOAvailableHW  | Where IsMultipathed -eq $false
         if ($SupportedHardware) {
-            Invoke-Command -ComputerName $ComputerName -ScriptBlock {
-                mpclaim.exe -n -i -d "DGC     RAID 3          "
-                mpclaim.exe -n -i -d "DGC     RAID 5          "
-                mpclaim.exe -n -i -d "DGC     RAID 1          "
-                mpclaim.exe -n -i -d "DGC     RAID 0          "
-                mpclaim.exe -n -i -d "DGC     RAID 10         "
-                mpclaim.exe -n -i -d "DGC     VRAID           "
-                mpclaim.exe -n -i -d "DGC     DISK            "
-                mpclaim.exe -n -i -d "DGC     LUNZ            "
-                mpclaim.exe -n -i -d "DELL    MD38xxf         "
-                mpclaim.exe -n -i -d "DELL    Universal Xport "
-            }
+            Update-MPIOClaimedHW
             Restart-Computer -ComputerName $ComputerName
-            Wait-ForNodeRestart -ComputerName $ComputerName
         }
     }
+    Wait-ForNodeRestart -ComputerName $ComputerName
 }
