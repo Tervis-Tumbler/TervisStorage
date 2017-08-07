@@ -113,6 +113,24 @@ function Get-SnapshotsFromVNX{
     }
 }
 
+function Get-StorageGroupsFromVNX{
+    param(
+        [Parameter(Mandatory)]
+        [ValidateSet(“VNX5200”,”VNX5300","ALL")]
+        $TervisStorageArraySelection
+    )
+    if($TervisStorageArraySelection -eq "ALL"){
+        $SanSelectionList = "vnx5200","vnx5300"
+    }
+    else{$SanSelectionList = $TervisStorageArraySelection}
+    foreach ($Array in $SanSelectionList){
+        $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $Array
+        $TervisStorageArrayPasswordDetails = Get-PasswordstateEntryDetails -PasswordID $TervisStorageArrayDetails.PasswordstateCredentialID
+        $RawSnapshotOutput = & 'c:\program files\emc\naviseccli.exe' -scope 0 -h $TervisStorageArrayDetails.IPAddress -user $TervisStorageArrayPasswordDetails.Username -password $TervisStorageArrayPasswordDetails.Password storagegroup -list
+        $RawSnapshotOutput | ConvertFrom-String -TemplateFile $PSScriptRoot\VNX_StorageGroup_Template.txt
+    }
+}
+
 function New-VNXLUNSnapshot{
     param(
         [Parameter(Mandatory)]
