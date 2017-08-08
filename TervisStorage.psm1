@@ -130,23 +130,31 @@ function Get-StorageGroupsFromVNX{
         $RawStorageGroupOutput = & 'c:\program files\emc\naviseccli.exe' -scope 0 -h $TervisStorageArrayDetails.IPAddress -user $TervisStorageArrayPasswordDetails.Username -password $TervisStorageArrayPasswordDetails.Password storagegroup -list
         $output = $RawStorageGroupOutput | ConvertFrom-String -TemplateContent $template$
         $LunsFromVNX = Get-LUNSFromVNX -TervisStorageArraySelection $TervisStorageArraySelection
-        $output | %{
-            $StorageGroupName = $_.StorageGroupName
+        Foreach ($Storagegroup in $output){
+            $StorageGroupName = $StorageGroup.StorageGroupName
+            if(-not $StorageGroup.LUNS){
+                [pscustomobject][ordered]@{
+                    StorageGroupName = $StorageGroupName
+                    MemberLUNs = ""
+                }
+                Continue
+            }
+            $StorageGroupName = $StorageGroup.StorageGroupName
             $MemberLuns = @()
-            ($_.luns).items | %{
+            ($Storagegroup.luns).items | %{
                 $LUNDetail = $LunsFromVNX | where LUNID -eq $_.ALUNumber
                 $MemberLuns += [pscustomobject][ordered]@{
                     HLUNumber = $_.HLUNumber
                     ALUNumber = $_.ALUNumber
                     Name = $LUNDetail.LUNNAME
-                    Capacity = $LUNDetail.LUNCapacity
+                    "Capacity GB" = ($LUNDetail.LUNCapacity / 1KB)
                     LUNUID = $LUNDetail.LUNUID
                 }
             }
-         [pscustomobject][ordered]@{
-            StorageGroupName = $StorageGroupName
-            MemberLUNs = $MemberLuns
-        }
+            [pscustomobject][ordered]@{
+                StorageGroupName = $StorageGroupName
+                MemberLUNs = $MemberLuns
+            }
         }
     }
 }
