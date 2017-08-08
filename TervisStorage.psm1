@@ -119,6 +119,7 @@ function Get-StorageGroupsFromVNX{
         [ValidateSet(“VNX5200”,”VNX5300","ALL")]
         $TervisStorageArraySelection
     )
+    $TervisStorageArraySelection = "vnx5300"
     if($TervisStorageArraySelection -eq "ALL"){
         $SanSelectionList = "vnx5200","vnx5300"
     }
@@ -126,8 +127,27 @@ function Get-StorageGroupsFromVNX{
     foreach ($Array in $SanSelectionList){
         $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $Array
         $TervisStorageArrayPasswordDetails = Get-PasswordstateEntryDetails -PasswordID $TervisStorageArrayDetails.PasswordstateCredentialID
-        $RawSnapshotOutput = & 'c:\program files\emc\naviseccli.exe' -scope 0 -h $TervisStorageArrayDetails.IPAddress -user $TervisStorageArrayPasswordDetails.Username -password $TervisStorageArrayPasswordDetails.Password storagegroup -list
-        $RawSnapshotOutput | ConvertFrom-String -TemplateFile $PSScriptRoot\VNX_StorageGroup_Template.txt
+        $RawStorageGroupOutput = & 'c:\program files\emc\naviseccli.exe' -scope 0 -h $TervisStorageArrayDetails.IPAddress -user $TervisStorageArrayPasswordDetails.Username -password $TervisStorageArrayPasswordDetails.Password storagegroup -list
+        $output = $RawStorageGroupOutput | ConvertFrom-String -TemplateContent $template$
+        $LunsFromVNX = Get-LUNSFromVNX -TervisStorageArraySelection $TervisStorageArraySelection
+        $output | %{
+            $StorageGroupName = $_.StorageGroupName
+            $MemberLuns = @()
+            ($_.luns).items | %{
+                $LUNDetail = $LunsFromVNX | where LUNID -eq $_.ALUNumber
+                $MemberLuns += [pscustomobject][ordered]@{
+                    HLUNumber = $_.HLUNumber
+                    ALUNumber = $_.ALUNumber
+                    Name = $LUNDetail.LUNNAME
+                    Capacity = $LUNDetail.LUNCapacity
+                    LUNUID = $LUNDetail.LUNUID
+                }
+            }
+         [pscustomobject][ordered]@{
+            StorageGroupName = $StorageGroupName
+            MemberLUNs = $MemberLuns
+        }
+        }
     }
 }
 
