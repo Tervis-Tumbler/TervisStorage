@@ -128,7 +128,7 @@ function Get-StorageGroupsFromVNX{
         $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $Array
         $TervisStorageArrayPasswordDetails = Get-PasswordstateEntryDetails -PasswordID $TervisStorageArrayDetails.PasswordstateCredentialID
         $RawStorageGroupOutput = & 'c:\program files\emc\naviseccli.exe' -scope 0 -h $TervisStorageArrayDetails.IPAddress -user $TervisStorageArrayPasswordDetails.Username -password $TervisStorageArrayPasswordDetails.Password storagegroup -list
-        $output = $RawStorageGroupOutput | ConvertFrom-String -TemplateContent $template$
+        $output = $RawStorageGroupOutput | ConvertFrom-String -TemplateFile $PSScriptRoot\VNX_StorageGroup_Template.txt
         $LunsFromVNX = Get-LUNSFromVNX -TervisStorageArraySelection $TervisStorageArraySelection
         Foreach ($Storagegroup in $output){
             $StorageGroupName = $StorageGroup.StorageGroupName
