@@ -142,6 +142,7 @@ function Get-StorageGroupsFromVNX{
             if(-not $StorageGroup.LUNS){
                 [pscustomobject][ordered]@{
                     StorageGroupName = $StorageGroupName
+                    Array = $Array
                     MemberLUNs = ""
                 }
                 Continue
