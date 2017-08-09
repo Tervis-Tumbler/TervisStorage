@@ -68,7 +68,7 @@ function Get-VNXArrayFaults {
 
 function Get-SPLogFilesFromVNX{
     param (
-        [Parameter(Mandatory)][ValidateSet(“VNX5200”,”VNX5300”)][String]$StorageArrayName,
+        [Parameter(Mandatory)][ValidateSet(“VNX5200”,”VNX5300”,"All")][String]$StorageArrayName,
         [Parameter(Mandatory)][ValidateSet(“SPA”,”SPB”)]$StorageProcessor,
         [Parameter(Mandatory)]$FileName,
         [Parameter(Mandatory)]$DestinationPath
@@ -83,16 +83,21 @@ function Get-SPLogFilesFromVNX{
 function Get-LUNSFromVNX {
     param(
         [Parameter(Mandatory)]
-        [ValidateSet(“VNX5200”,”VNX5300")]
+        [ValidateSet(“VNX5200”,”VNX5300","All")]
         $TervisStorageArraySelection
     )
-    $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $TervisStorageArraySelection
-    $TervisStorageArrayPasswordDetails = Get-PasswordstateEntryDetails -PasswordID $TervisStorageArrayDetails.PasswordstateCredentialID
 
-
-
-    $RawGetLUNOutput = Invoke-Command -ScriptBlock {& 'c:\program files\emc\naviseccli.exe' -scope 0 -h $TervisStorageArrayDetails.IPAddress -user $TervisStorageArrayPasswordDetails.Username -password $TervisStorageArrayPasswordDetails.Password getlun}
-    $RawGetLUNOutput | ConvertFrom-String -TemplateFile $PSScriptRoot\VNX_getlun_Template
+    if($TervisStorageArraySelection -eq "ALL"){
+        $SanSelectionList = "vnx5200","vnx5300"
+    }
+    else{$SanSelectionList = $TervisStorageArraySelection}
+    foreach ($Array in $SanSelectionList){
+        $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $Array
+        $TervisStorageArrayPasswordDetails = Get-PasswordstateEntryDetails -PasswordID $TervisStorageArrayDetails.PasswordstateCredentialID
+        $RawGetLUNOutput = Invoke-Command -ScriptBlock {& 'c:\program files\emc\naviseccli.exe' -scope 0 -h $TervisStorageArrayDetails.IPAddress -user $TervisStorageArrayPasswordDetails.Username -password $TervisStorageArrayPasswordDetails.Password getlun}
+        $LUNOutput = $RawGetLUNOutput | ConvertFrom-String -TemplateFile $PSScriptRoot\VNX_getlun_Template
+        $LUNOutput | Add-Member -MemberType NoteProperty -name "Array" -PassThru -Value $Array
+    }
 }   
 
 function Get-SnapshotsFromVNX{
@@ -109,7 +114,9 @@ function Get-SnapshotsFromVNX{
         $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $Array
         $TervisStorageArrayPasswordDetails = Get-PasswordstateEntryDetails -PasswordID $TervisStorageArrayDetails.PasswordstateCredentialID
         $RawSnapshotOutput = & 'c:\program files\emc\naviseccli.exe' -scope 0 -h $TervisStorageArrayDetails.IPAddress -user $TervisStorageArrayPasswordDetails.Username -password $TervisStorageArrayPasswordDetails.Password snap -list
-        $RawSnapshotOutput | ConvertFrom-String -TemplateFile $PSScriptRoot\VNX_Snapshotlist_Template
+        $SnapshotOutput = $RawSnapshotOutput | ConvertFrom-String -TemplateFile $PSScriptRoot\VNX_Snapshotlist_Template
+        $SnapshotOutput | Add-Member -MemberType NoteProperty -name "Array" -PassThru -Value $Array
+
     }
 }
 
@@ -153,6 +160,7 @@ function Get-StorageGroupsFromVNX{
             }
             [pscustomobject][ordered]@{
                 StorageGroupName = $StorageGroupName
+                Array = $Array
                 MemberLUNs = $MemberLuns
             }
         }
