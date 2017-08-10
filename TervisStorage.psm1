@@ -126,7 +126,6 @@ function Get-StorageGroupsFromVNX{
         [ValidateSet(“VNX5200”,”VNX5300","ALL")]
         $TervisStorageArraySelection
     )
-    $TervisStorageArraySelection = "vnx5300"
     if($TervisStorageArraySelection -eq "ALL"){
         $SanSelectionList = "vnx5200","vnx5300"
     }
@@ -344,25 +343,17 @@ function Register-UnisphereHost {
       [switch]$ScriptOnly
     
       )
-    
-    
     if (!(Test-Path 'c:\program files\EMC\NaviSECCli.exe'))
         {
         write-host "NaviSecCLI.exe not found. Please install NaviSECCLI and try again."
         break
         }
-    
-    $SANDetail = @()
-    
-    $VNX5300Detail = New-Object psobject
-    $VNX5300Detail | Add-Member PortListA @( ("a","0"),("b","0"))
-    $VNX5300Detail | Add-Member PortListB @( ("a","1"),("b","1"))
-    $VNX5300Detail | Add-Member SPIP "10.172.248.153"
-    
-    $VNX2Detail = New-Object psobject
-    $VNX2Detail | Add-Member PortListA @( ("a","0"),("a","1"),("b","0"),("b","1") )
-    $VNX2Detail | Add-Member PortListB @( ("a","2"),("a","3"),("b","2"),("b","3") )
-    $VNX2Detail | Add-Member SPIP "10.172.248.160"
+
+    if($TervisStorageArraySelection -eq "ALL"){
+        $SanSelectionList = "vnx5200","vnx5300"
+    }
+    else{$SanSelectionList = $TervisStorageArraySelection}
+    foreach ($Array in $SanSelectionList){
     
     if($FabricDetail.FabricAWWNSetB)
         {
@@ -382,31 +373,24 @@ function Register-UnisphereHost {
         }
     
     
-        switch ($SanSelection)
-            {
-                "VNX5300" {
-                    $SANDetail = $VNX5300Detail
-                }
-                "VNX2" {
-                    $SANDetail = $VNX2Detail
-                }
-                "ALL" {
-                    $SANDetail += $VNX5300Detail
-                    $SANDetail += $VNX2Detail
-                }
-            }
     
-    $Command = ""
-    Foreach ($SAN in $SANDetail)
-    {
+    if($TervisStorageArraySelection -eq "ALL"){
+        $SanSelectionList = "vnx5200","vnx5300"
+    }
+    else{$SanSelectionList = $TervisStorageArraySelection}
+
+    foreach ($Array in $SanSelectionList){
+        $Command = ""
+        $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $Array
+        $TervisStorageArrayPasswordDetails = Get-PasswordstateEntryDetails -PasswordID $TervisStorageArrayDetails.PasswordstateCredentialID
         write-host "`nCreating Storage Groups`n"
-        $command += "& 'c:\program files\EMC\NaviSECCli.exe' -user sysadmin -password Tervis4ever -scope 0 -h $($SAN.SPIP) storagegroup -create -gname $($FabricDetail.Hostname) ; `n"
+        $command += "& 'c:\program files\EMC\NaviSECCli.exe' -user $($TervisStorageArrayPasswordDetails.Username) -password $($TervisStorageArrayPasswordDetails.Password) -scope 0 -h $($TervisStorageArrayDetails.IPAddress) storagegroup -create -gname $($FabricDetail.Hostname) ; `n"
     
         Foreach ($WWN in $WWNListA)
             {
             Foreach($Port in $SAN.PortListA)
                 {
-                $command += "& 'c:\program files\EMC\NaviSECCli.exe' -user sysadmin -password Tervis4ever -scope 0 -h $($SAN.SPIP) storagegroup -setpath -o -gname " `
+                $command += "& 'c:\program files\EMC\NaviSECCli.exe' -user $($TervisStorageArrayPasswordDetails.Username) -password $($TervisStorageArrayPasswordDetails.Password) -scope 0 -h $($TervisStorageArrayDetails.IPAddress) storagegroup -setpath -o -gname " `
                 + $FabricDetail.Hostname + `
                 " -hbauid "+ $WWN + `
                 " -sp " + $Port[0] + `
@@ -419,7 +403,7 @@ function Register-UnisphereHost {
             {
             Foreach($Port in $SAN.PortListB)
                 {
-                $command += "& 'c:\program files\EMC\NaviSECCli.exe' -user sysadmin -password Tervis4ever -scope 0 -h $($SAN.SPIP) storagegroup -setpath -o -gname " `
+                $command += "& 'c:\program files\EMC\NaviSECCli.exe' -user $($TervisStorageArrayPasswordDetails.Username) -password $($TervisStorageArrayPasswordDetails.Password) -scope 0 -h $($TervisStorageArrayDetails.IPAddress) storagegroup -setpath -o -gname " `
                 + $FabricDetail.Hostname + `
                 " -hbauid "+ $WWN + `
                 " -sp " + $Port[0] + `
