@@ -9,6 +9,93 @@
     Hostname = "VNXSPA"
 }
 
+$TervisBrocadeSwitchDefinitions = [pscustomobject][ordered]@{
+    Name="BrocadeSW1"
+    PasswordstateCredentialID = "44"
+    Fabric = "FabricA"
+    InitiatorSuffix = "FC0"
+    Site = "HQ"
+},
+[pscustomobject][ordered]@{
+    Name="BrocadeSW2"
+    PasswordstateCredentialID = "45"
+    Fabric = "FabricB"
+    InitiatorSuffix = "FC1"
+    Site = "HQ"
+}
+
+$TervisStorageZoningTargets = [psobject][ordered]@{
+    Array = "VNX5300" 
+    Initiators = [psobject][ordered]@{
+        Name = "FabricA"
+        Targets = "VNX1_A2;VNX1_B2"
+    },
+    [psobject][ordered]@{
+        Name = "FabricB"
+        Targets = "VNX1_A3;VNX1_B3"
+    }
+},
+[psobject][ordered]@{
+    Array = "VNX5200"
+    Initiators = [psobject][ordered]@{
+        Name = "FabricA"
+        Targets = "VNX2_A2_P0;VNX2_A2_P1;VNX2_B2_P0;VNX2_B2_P1"
+    },
+    [psobject][ordered]@{
+        Name = "FabricB"
+        Targets = "VNX2_A2_P2;VNX2_A2_P3;VNX2_B2_P2;VNX2_B2_P3"
+    }
+},
+[psobject][ordered]@{
+    Array = "CX3-20"
+    Initiators = [psobject][ordered]@{
+        Name = "FabricA"
+        Targets = "Yosemite_SAN_A0;Yosemite_SAN_B1"
+    },
+    [psobject][ordered]@{
+        Name = "FabricB"
+        Targets = "Yosemite_SAN_A1;Yosemite_SAN_B0"
+    }
+},
+[psobject][ordered]@{
+    Array = "MD3860F-HQ"
+    Initiators = [psobject][ordered]@{
+        Name = "FabricA"
+        Targets = "MD3860F_SP0_P0;MD3860F_SP1_P0"
+    },
+    [psobject][ordered]@{
+        Name = "FabricB"
+        Targets = "MD3860F_SP0_P1;MD3860F_SP1_P1"
+    }
+},
+[psobject][ordered]@{
+    Array = "MD3860F-P10"
+    Initiators = [psobject][ordered]@{
+        Name = "FabricA"
+        Targets = "MD3860F_P10_SP0_P0;MD3860F_P10_SP1_P0"
+    },
+    [psobject][ordered]@{
+        Name = "FabricB"
+        Targets = "MD3860F_P10_SP0_P1;MD3860F_P10_SP1_P1"
+    }
+}
+
+function Get-TervisStorageZoningTargets{
+    param(
+        #[Parameter()][ValidateSet(“BrocadeSW1”,”BrocadeSW2”)][String]$BrocadeSwitch
+        $Array,
+        $Fabric
+    )
+    if($Array -eq "All"){
+        $TervisStorageZoningTarget = $TervisStorageZoningTargets
+    }
+    else{
+        $TervisStorageZoningTarget = $TervisStorageZoningTargets | where Array -eq $Array
+    }
+    
+    $TervisStorageZoningTarget.initiators | where {-not $Fabric -or $_.name -In $Fabric}
+}
+
 function Get-TervisStorageArrayDetails{
     param(
         [Parameter(Mandatory)][ValidateSet(“VNX5200”,”VNX5300”)][String]$StorageArrayName,
@@ -24,6 +111,18 @@ function Get-TervisStorageArrayDetails{
     $StorageArrayInfo | Add-Member -MemberType NoteProperty -Name SPIPAddress -Value $SPIPAddress -Force
     $StorageArrayInfo
 
+}
+
+function Get-TervisBrocadeDetails{
+    param(
+        [Parameter()][ValidateSet(“BrocadeSW1”,”BrocadeSW2”)][String]$BrocadeSwitch
+    )
+    if($BrocadeSwitch){
+        $SwitchDefinition = $TervisBrocadeSwitchDefinitions| Where name -EQ $BrocadeSwitch
+    }
+    else{$SwitchDefinition = $TervisBrocadeSwitchDefinitions}
+    $SwitchDefinition | Add-Member -MemberType ScriptProperty -Name IPAddress -Value {(Resolve-DnsName -Name $this.Name).IPAddress} -Force
+    $SwitchDefinition
 }
 
 function Get-VNXFileList {
@@ -354,24 +453,24 @@ function Register-UnisphereHost {
     }
     else{$SanSelectionList = $TervisStorageArraySelection}
     foreach ($Array in $SanSelectionList){
-    
-    if($FabricDetail.FabricAWWNSetB)
-        {
-            $WWNListA = ($FabricDetail.FabricAWWNSetA,$FabricDetail.FabricAWWNSetB)
-        }
-    Else
-        {
-            $WWNListA = $FabricDetail.FabricAWWPNSetA
-        }
-    if($FabricDetail.FabricBWWNSetB)
-        {
-            $WWNListB = ($FabricDetail.FabricBWWNSetA,$FabricDetail.FabricBWWNSetB)
-        }
-    Else
-        {
-            $WWNListB = $FabricDetail.FabricBWWPNSetA
-        }
-    
+        
+        if($FabricDetail.FabricAWWNSetB)
+            {
+                $WWNListA = ($FabricDetail.FabricAWWNSetA,$FabricDetail.FabricAWWNSetB)
+            }
+        Else
+            {
+                $WWNListA = $FabricDetail.FabricAWWPNSetA
+            }
+        if($FabricDetail.FabricBWWNSetB)
+            {
+                $WWNListB = ($FabricDetail.FabricBWWNSetA,$FabricDetail.FabricBWWNSetB)
+            }
+        Else
+            {
+                $WWNListB = $FabricDetail.FabricBWWPNSetA
+            }
+    }
     
     
     if($TervisStorageArraySelection -eq "ALL"){
@@ -382,7 +481,7 @@ function Register-UnisphereHost {
     foreach ($Array in $SanSelectionList){
         $Command = ""
         $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $Array
-        $TervisStorageArrayPasswordDetails = Get-PasswordstateEntryDetails -PasswordID $TervisStorageArrayDetails.PasswordstateCredentialID
+        $TervisStorageArrayPasswordDetails = Get-PasswordstateEntryDetails -PasswordID $($TervisStorageArrayDetails.PasswordstateCredentialID)
         write-host "`nCreating Storage Groups`n"
         $command += "& 'c:\program files\EMC\NaviSECCli.exe' -user $($TervisStorageArrayPasswordDetails.Username) -password $($TervisStorageArrayPasswordDetails.Password) -scope 0 -h $($TervisStorageArrayDetails.IPAddress) storagegroup -create -gname $($FabricDetail.Hostname) ; `n"
     
@@ -577,4 +676,43 @@ function Invoke-ClaimMPOI {
         }
     }
     Wait-ForNodeRestart -ComputerName $ComputerName
+}
+
+function Remove-BrocadeZoning {
+    [CmdletBinding(
+        SupportsShouldProcess,
+        ConfirmImpact="High"
+    )]
+    param(
+        [Parameter(Mandatory)]$Hostname,          
+        
+        [Parameter(Mandatory)]
+        [ValidateSet('VNX5300','VNX2','CX3-20','MD3860F-HQ','MD3860F-P10','ALL')]$SANSelection
+    )
+    begin {
+    $TervisBrocadeDetails = Get-TervisBrocadeDetails
+    $Hostname = $Hostname -replace "-",""
+    }
+    Process {
+        foreach ($Switch in $TervisBrocadeDetails){
+            $TervisBrocadePasswordstateCredential = Get-PasswordstateCredential -PasswordID $Switch.PasswordstateCredentialID
+            New-SSHSession -ComputerName $Switch.IPAddress -Credential $TervisBrocadePasswordstateCredential
+            foreach ($Array in $SANSelection){
+                
+                $ZoningTargetList = Get-TervisStorageZoningTargets -Array $Array -Fabric $Switch.Fabric
+                $AliasName = ("$($Hostname.ToUpper())_$($Switch.InitiatorSuffix)")
+                $ZoningTargets = $ZoningTargetList.targets -split ";"
+                $SSHCommand = ""
+                $ZoningTargets | %{$SSHCommand += "cfgremove `"cfg`", `"$($AliasName)_TO_$($_)`";"}
+                $ZoningTargets | %{$SSHCommand += "zonedelete `"$($AliasName)_TO_$($_)`";"}
+                $SSHCommand += "alidelete `'$AliasName`';"
+                $SSHCommand += "echo `'y`' | cfgsave ; echo `'y`' | cfgenable cfg"
+                if ($PSCmdlet.ShouldProcess($Switch.Name,$SSHCommand)){
+                   (Invoke-SSHCommand -SSHSession $SshSessions -Command "$SSHCommand").output
+                }
+            }
+            
+            Remove-SSHSession -SSHSession $SshSessions
+        }
+    }
 }
