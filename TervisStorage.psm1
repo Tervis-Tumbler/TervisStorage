@@ -708,7 +708,7 @@ function Remove-BrocadeZoning {
                 $SSHCommand += "alidelete `'$AliasName`';"
                 $SSHCommand += "echo `'y`' | cfgsave ; echo `'y`' | cfgenable cfg"
                 if ($PSCmdlet.ShouldProcess($Switch.Name,$SSHCommand)){
-                   (Invoke-SSHCommand -SSHSession $SshSessions -Command "$SSHCommand").output
+                   Invoke-SSHCommand -SSHSession $SshSessions -Command "$SSHCommand"
                 }
             }
             
