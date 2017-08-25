@@ -234,7 +234,7 @@ function Get-StorageGroupsFromVNX{
         $TervisStorageArrayPasswordDetails = Get-PasswordstateEntryDetails -PasswordID $TervisStorageArrayDetails.PasswordstateCredentialID
         $RawStorageGroupOutput = & 'C:\Program Files (x86)\EMC\Navisphere CLI\NaviSECCli.exe' -scope 0 -h $TervisStorageArrayDetails.IPAddress -user $TervisStorageArrayPasswordDetails.Username -password $TervisStorageArrayPasswordDetails.Password storagegroup -list
         $output = $RawStorageGroupOutput | ConvertFrom-String -TemplateFile $PSScriptRoot\VNX_StorageGroup_Template.txt
-        $LunsFromVNX = Get-LUNSFromVNX -TervisStorageArraySelection $TervisStorageArraySelection
+        $LunsFromVNX = Get-LUNSFromVNX -TervisStorageArraySelection $Array
         Foreach ($Storagegroup in $output){
             $StorageGroupName = $StorageGroup.StorageGroupName
             if(-not $StorageGroup.LUNS){
@@ -253,7 +253,7 @@ function Get-StorageGroupsFromVNX{
                     HLUNumber = $_.HLUNumber
                     ALUNumber = $_.ALUNumber
                     Name = $LUNDetail.LUNNAME
-                    "Capacity GB" = ($LUNDetail.LUNCapacity / 1KB)
+                    "Capacity GB" = (($LUNDetail.LUNCapacity) / 1KB)
                     LUNUID = $LUNDetail.LUNUID
                 }
             }
@@ -672,7 +672,7 @@ function Invoke-ClaimMPOI {
         $SupportedHardware = Get-MPIOAvailableHW  | Where IsMultipathed -eq $false
         if ($SupportedHardware) {
             Update-MPIOClaimedHW
-            Restart-Computer -ComputerName $ComputerName
+            Restart-Computer
         }
     }
     Wait-ForNodeRestart -ComputerName $ComputerName
