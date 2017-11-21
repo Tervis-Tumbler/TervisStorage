@@ -448,10 +448,21 @@ function Register-UnisphereHost {
         break
         }
 
-    if($TervisStorageArraySelection -eq "ALL"){
+    $VNX5300Detail = New-Object psobject
+    $VNX5300Detail | Add-Member PortListA @( ("a","0"),("b","0"))
+    $VNX5300Detail | Add-Member PortListB @( ("a","1"),("b","1"))
+    $VNX5300Detail | Add-Member SPIP "10.172.248.153"
+    
+    $VNX2Detail = New-Object psobject
+    $VNX2Detail | Add-Member PortListA @( ("a","0"),("a","1"),("b","0"),("b","1") )
+    $VNX2Detail | Add-Member PortListB @( ("a","2"),("a","3"),("b","2"),("b","3") )
+    $VNX2Detail | Add-Member SPIP "10.172.248.160"
+
+    if($SANSelection -eq "ALL"){
         $SanSelectionList = "vnx5200","vnx5300"
     }
     else{$SanSelectionList = $TervisStorageArraySelection}
+    
     foreach ($Array in $SanSelectionList){
         
         if($FabricDetail.FabricAWWNSetB)
@@ -472,14 +483,9 @@ function Register-UnisphereHost {
             }
     }
     
-    
-    if($TervisStorageArraySelection -eq "ALL"){
-        $SanSelectionList = "vnx5200","vnx5300"
-    }
-    else{$SanSelectionList = $TervisStorageArraySelection}
 
+    $Command = ""
     foreach ($Array in $SanSelectionList){
-        $Command = ""
         $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $Array
         $TervisStorageArrayPasswordDetails = Get-PasswordstateEntryDetails -PasswordID $($TervisStorageArrayDetails.PasswordstateCredentialID)
         write-host "`nCreating Storage Groups`n"
@@ -514,7 +520,7 @@ function Register-UnisphereHost {
     write-host "`nRegistering initiators with selected SANs`n"
     if($scriptonly){
         $Command
-    }
+    }/
     else{
         Invoke-Expression -Command $Command
     }
@@ -533,7 +539,7 @@ function Set-BrocadeZoning {
 
     [Parameter(Mandatory, ParameterSetName = "PhysicalServerZoning")]
     [Parameter(Mandatory, ParameterSetName = "VMZoning")]
-    [ValidateSet('VNX5300','VNX2','CX3-20','MD3860F-HQ','MD3860F-P10','ALL')]$SANSelection
+    [ValidateSet('VNX5300','VNX2','CX3-20','MD3860F01','MD3860F02','ALL')]$SANSelection
       )
 
         if (-not $FabricDetail){
@@ -580,13 +586,13 @@ function Set-BrocadeZoning {
                     $TargetInitiatorA = "VNX2_A2_P0;VNX2_A2_P1;VNX2_B2_P0;VNX2_B2_P1;Yosemite_SAN_A0;Yosemite_SAN_B1;VNX1_A2;VNX1_B2"
                     $TargetInitiatorB = "VNX2_A2_P2;VNX2_A2_P3;VNX2_B2_P2;VNX2_B2_P3;Yosemite_SAN_A1;Yosemite_SAN_B0;VNX1_A3;VNX1_B3"
                 }
-                "MD3860F-HQ" {
+                "MD3860F01" {
                     $TargetInitiatorA = "MD3860F_SP0_P0;MD3860F_SP1_P0"
                     $TargetInitiatorB = "MD3860F_SP0_P1;MD3860F_SP1_P1"
                 }
-                "MD3860F-P10" {
-                    $TargetInitiatorA = "MD3860F_P10_SP0_P0;MD3860F_P10_SP1_P0"
-                    $TargetInitiatorB = "MD3860F_P10_SP0_P1;MD3860F_P10_SP1_P1"
+                "MD3860F02" {
+                    $TargetInitiatorA = "MD3860F02_SP0_P0;MD3860F02_SP1_P0"
+                    $TargetInitiatorB = "MD3860F02_SP0_P1;MD3860F02_SP1_P1"
                 }
 
     
