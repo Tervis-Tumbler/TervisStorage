@@ -675,7 +675,7 @@ function Invoke-ClaimMPOI {
         if (-NOT ($MSDSMList | Where {$_.VendorId -eq "DELL" -and $_.ProductId -eq "Universal Xport"})) {
             New-MSDSMSupportedHW -VendorId DELL -ProductId "Universal Xport"
         }
-        $SupportedHardware = Get-MPIOAvailableHW  | Where IsMultipathed -eq $false
+        $SupportedHardware = Get-MPIOAvailableHW  | Where {($_.IsMultipathed -eq $false) -AND ($_.VendorId -ne "Msft") -and ($_.ProductId -ne "Virtual Disk")}
         if ($SupportedHardware) {
             Update-MPIOClaimedHW
             Restart-Computer
