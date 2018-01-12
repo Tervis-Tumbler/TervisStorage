@@ -679,9 +679,9 @@ function Invoke-ClaimMPOI {
         if ($SupportedHardware) {
             Update-MPIOClaimedHW
             Restart-Computer
+            Wait-ForNodeRestart -ComputerName $ComputerName
         }
-    }
-    Wait-ForNodeRestart -ComputerName $ComputerName
+    }    
 }
 
 function Remove-BrocadeZoning {
