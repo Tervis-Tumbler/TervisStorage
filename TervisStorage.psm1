@@ -541,6 +541,8 @@ function Set-BrocadeZoning {
     [Parameter(Mandatory, ParameterSetName = "VMZoning")]
     [ValidateSet('VNX5300','VNX2','CX3-20','MD3860F01','MD3860F02','ALL')]$SANSelection
       )
+    $BrocadeSW1Credential = Get-PasswordstateCredential -PasswordID 44
+    $BrocadeSW2Credential = Get-PasswordstateCredential -PasswordID 45
 
         if (-not $FabricDetail){
             $FabricDetail = [PSCustomObject][Ordered] @{
@@ -614,29 +616,40 @@ function Set-BrocadeZoning {
         $ConfigMemberB | Add-Member ZoneNameB ($FabricDetail.Hostname + "_TO_SANS").ToUpper()
         $ConfigMemberB | Add-Member ZoneTargetsB $TargetInitiatorB
     
-    $SSHCommand = "" 
+#    $SSHCommand = "" 
     
-    $SSHCommand += "alicreate `'$($ConfigMemberA.AliasNameA)`', `'$($ConfigMemberA.InitiatorAWWN)`' ;`n"
-    $ConfigMemberA.ZoneTargetsA -split ";" | %{$SSHCommand += "zonecreate $($ConfigMemberA.AliasNameA)_TO_$($_), `'$($ConfigMemberA.AliasNameA);$($_)`' ;`n"}
-    $ConfigMemberA.ZoneTargetsA -split ";" | %{$SSHCommand += "cfgadd cfg, $($ConfigMemberA.AliasNameA)_TO_$($_);`n"}
-    $SSHCommand += "echo `'y`' | cfgsave ; echo `'y`' | cfgenable cfg`n"
-    write-host "`nBrocadeSW1 Zoning Script"
-    write-host "********************************************************"
-    $SSHCommand
-    write-host "********************************************************"
-    Write-Host ""
-    $SSHCommand = "" 
-    
-    $SSHCommand += "alicreate `'$($ConfigMemberB.AliasNameB)`', `'$($ConfigMemberB.InitiatorBWWN)`' ;`n"
-    $ConfigMemberB.ZoneTargetsB -split ";" | %{$SSHCommand += "zonecreate $($ConfigMemberB.AliasNameB)_TO_$($_), `'$($ConfigMemberB.AliasNameB);$($_)`' ;`n"}
-    $ConfigMemberB.ZoneTargetsB -split ";" | %{$SSHCommand += "cfgadd cfg, $($ConfigMemberB.AliasNameB)_TO_$($_);`n"}
-    $SSHCommand += "echo `'y`' | cfgsave ; echo `'y`' | cfgenable cfg`n"
-    write-host "BrocadeSW2 Zoning Script"
-    write-host "********************************************************"
-    $SSHCommand
-    write-host "********************************************************"
-    Write-Host ""
-    $SSHCommand = "" 
+    $FabricASSHScript += "alicreate `'$($ConfigMemberA.AliasNameA)`', `'$($ConfigMemberA.InitiatorAWWN)`' ;`n"
+    $ConfigMemberA.ZoneTargetsA -split ";" | %{$FabricASSHScript += "zonecreate $($ConfigMemberA.AliasNameA)_TO_$($_), `'$($ConfigMemberA.AliasNameA);$($_)`' ;`n"}
+    $ConfigMemberA.ZoneTargetsA -split ";" | %{$FabricASSHScript += "cfgadd cfg, $($ConfigMemberA.AliasNameA)_TO_$($_);`n"}
+#    $FabricASSHScript += "echo `'y`' | cfgsave ; echo `'y`' | cfgenable cfg`n"
+    #write-host "`nBrocadeSW1 Zoning Script"
+    #write-host "********************************************************"
+#    $FabricASSHScript
+    #write-host "********************************************************"
+    #Write-Host ""
+
+#    $SSHCommand = ""     
+    $FabricBSSHScript += "alicreate `'$($ConfigMemberB.AliasNameB)`', `'$($ConfigMemberB.InitiatorBWWN)`' ;`n"
+    $ConfigMemberB.ZoneTargetsB -split ";" | %{$FabricBSSHScript += "zonecreate $($ConfigMemberB.AliasNameB)_TO_$($_), `'$($ConfigMemberB.AliasNameB);$($_)`' ;`n"}
+    $ConfigMemberB.ZoneTargetsB -split ";" | %{$FabricBSSHScript += "cfgadd cfg, $($ConfigMemberB.AliasNameB)_TO_$($_);`n"}
+#    $FabricBSSHScript += "echo `'y`' | cfgsave ; echo `'y`' | cfgenable cfg`n"
+    #write-host "BrocadeSW2 Zoning Script"
+    #write-host "********************************************************"
+#    $FabricBSSHScript
+    #write-host "********************************************************"
+    #Write-Host ""
+#    $SSHCommand = "" 
+
+$FabricASSHScript
+$FabricBSSHScript
+
+#    New-SSHSession -ComputerName brocadesw1 -Credential $BrocadeSW1Credential -AcceptKey
+#    Invoke-SSHCommand -SSHSession (Get-SSHSession) -Command $FabricASSHScript
+#    get-sshsession | Remove-SSHSession
+#    New-SSHSession -ComputerName brocadesw2 -Credential $BrocadeSW1Credential -AcceptKey
+#    Invoke-SSHCommand -SSHSession (Get-SSHSession) -Command $FabricBSSHScript
+#    Get-SSHSession | Remove-SSHSession
+#    $FabricBSSHScript    
 }
 
 function Invoke-ClaimMPOI {
