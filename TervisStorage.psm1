@@ -621,7 +621,7 @@ function Set-BrocadeZoning {
     $FabricASSHScript += "alicreate `'$($ConfigMemberA.AliasNameA)`', `'$($ConfigMemberA.InitiatorAWWN)`' ;`n"
     $ConfigMemberA.ZoneTargetsA -split ";" | %{$FabricASSHScript += "zonecreate $($ConfigMemberA.AliasNameA)_TO_$($_), `'$($ConfigMemberA.AliasNameA);$($_)`' ;`n"}
     $ConfigMemberA.ZoneTargetsA -split ";" | %{$FabricASSHScript += "cfgadd cfg, $($ConfigMemberA.AliasNameA)_TO_$($_);`n"}
-#    $FabricASSHScript += "echo `'y`' | cfgsave ; echo `'y`' | cfgenable cfg`n"
+    $FabricASSHScript += "echo `'y`' | cfgsave ; echo `'y`' | cfgenable cfg`n"
     #write-host "`nBrocadeSW1 Zoning Script"
     #write-host "********************************************************"
 #    $FabricASSHScript
@@ -632,7 +632,7 @@ function Set-BrocadeZoning {
     $FabricBSSHScript += "alicreate `'$($ConfigMemberB.AliasNameB)`', `'$($ConfigMemberB.InitiatorBWWN)`' ;`n"
     $ConfigMemberB.ZoneTargetsB -split ";" | %{$FabricBSSHScript += "zonecreate $($ConfigMemberB.AliasNameB)_TO_$($_), `'$($ConfigMemberB.AliasNameB);$($_)`' ;`n"}
     $ConfigMemberB.ZoneTargetsB -split ";" | %{$FabricBSSHScript += "cfgadd cfg, $($ConfigMemberB.AliasNameB)_TO_$($_);`n"}
-#    $FabricBSSHScript += "echo `'y`' | cfgsave ; echo `'y`' | cfgenable cfg`n"
+    $FabricBSSHScript += "echo `'y`' | cfgsave ; echo `'y`' | cfgenable cfg`n"
     #write-host "BrocadeSW2 Zoning Script"
     #write-host "********************************************************"
 #    $FabricBSSHScript
@@ -736,4 +736,112 @@ function Remove-BrocadeZoning {
             Remove-SSHSession -SSHSession $SshSessions
         }
     }
+}
+
+function Set-BrocadeZoningAuto {
+    [CmdletBinding()]
+      param
+      (
+    [Parameter(Mandatory, ValueFromPipeline, ParameterSetName = "VMZoning")]$FabricDetail,
+
+    [Parameter(Mandatory, ParameterSetName = "PhysicalServerZoning")]$Hostname,          
+
+    [Parameter(Mandatory, ParameterSetName = "PhysicalServerZoning")]$FabricAWWPN,
+    [Parameter(Mandatory, ParameterSetName = "PhysicalServerZoning")]$FabricBWWPN,
+
+    [Parameter(Mandatory, ParameterSetName = "PhysicalServerZoning")]
+    [Parameter(Mandatory, ParameterSetName = "VMZoning")]
+    [ValidateSet('VNX5300','VNX2','CX3-20','MD3860F01','MD3860F02','ALL')]$SANSelection
+      )
+    $BrocadeSW1Credential = Get-PasswordstateCredential -PasswordID 44
+    $BrocadeSW2Credential = Get-PasswordstateCredential -PasswordID 45
+
+    if (-not $FabricDetail){
+        $FabricDetail = [PSCustomObject][Ordered] @{
+            Hostname = $Hostname
+            FabricAWWNSetA = $FabricAWWPN
+            FabricBWWNSetA = $FabricBWWPN
+        }
+    }
+
+    if($FabricDetail.FabricAWWNSetB)
+    {
+        $InitiatorAWWN = ($FabricDetail.FabricAWWPNSetA + ";" + $FabricDetail.fabricAWWPNSetB)
+    }
+    Else
+    {
+        
+        $InitiatorAWWN = $FabricAWWPN
+    }
+    if($FabricDetail.FabricBWWNSetB)
+    {
+        $InitiatorBWWN = ($FabricDetail.FabricBWWPNSetA + ";" + $FabricDetail.FabricBWWPNSetB)
+    }
+    Else
+    {
+        $InitiatorBWWN = $FabricBWWPN
+    }
+
+    switch ($SanSelection)
+        {
+            "VNX5300" {
+                $TargetInitiatorA = "VNX1_A2;VNX1_B2"
+                $TargetInitiatorB = "VNX1_A3;VNX1_B3"
+            }
+            "VNX2" {
+                $TargetInitiatorA = "VNX2_A2_P0;VNX2_A2_P1;VNX2_B2_P0;VNX2_B2_P1"
+                $TargetInitiatorB = "VNX2_A2_P2;VNX2_A2_P3;VNX2_B2_P2;VNX2_B2_P3"
+            }
+            "CX3-20" {
+                $TargetInitiatorA = "Yosemite_SAN_A0;Yosemite_SAN_B1"
+                $TargetInitiatorB = "Yosemite_SAN_A1;Yosemite_SAN_B0"
+            }
+            "ALL" {
+                $TargetInitiatorA = "VNX2_A2_P0;VNX2_A2_P1;VNX2_B2_P0;VNX2_B2_P1;Yosemite_SAN_A0;Yosemite_SAN_B1;VNX1_A2;VNX1_B2"
+                $TargetInitiatorB = "VNX2_A2_P2;VNX2_A2_P3;VNX2_B2_P2;VNX2_B2_P3;Yosemite_SAN_A1;Yosemite_SAN_B0;VNX1_A3;VNX1_B3"
+            }
+            "MD3860F01" {
+                $TargetInitiatorA = "MD3860F_SP0_P0;MD3860F_SP1_P0"
+                $TargetInitiatorB = "MD3860F_SP0_P1;MD3860F_SP1_P1"
+            }
+            "MD3860F02" {
+                $TargetInitiatorA = "MD3860F02_SP0_P0;MD3860F02_SP1_P0"
+                $TargetInitiatorB = "MD3860F02_SP0_P1;MD3860F02_SP1_P1"
+            }
+
+
+        }
+
+    $FabricDetail.Hostname = $FabricDetail.Hostname -replace "-",""
+
+    $ConfigMemberA = New-Object psobject
+    $ConfigMemberA | Add-Member InitiatorAName $FabricDetail.Hostname
+    $ConfigMemberA | Add-Member InitiatorAWWN $InitiatorAWWN
+    $ConfigMemberA | Add-Member AliasNameA (($FabricDetail.Hostname).ToUpper() + "_FC0")
+    $ConfigMemberA | Add-Member ZoneNameA ($FabricDetail.Hostname + "_TO_SANS").ToUpper()
+    $ConfigMemberA | Add-Member ZoneTargetsA $TargetInitiatorA
+    
+    $ConfigMemberB = New-Object psobject
+    $ConfigMemberB | Add-Member InitiatorBName $FabricDetail.Hostname
+    $ConfigMemberB | Add-Member InitiatorBWWN $InitiatorBWWN
+    $ConfigMemberB | Add-Member AliasNameB (($FabricDetail.Hostname).ToUpper() + "_FC1")
+    $ConfigMemberB | Add-Member ZoneNameB ($FabricDetail.Hostname + "_TO_SANS").ToUpper()
+    $ConfigMemberB | Add-Member ZoneTargetsB $TargetInitiatorB
+    $FabricASSHScript += "alicreate `'$($ConfigMemberA.AliasNameA)`', `'$($ConfigMemberA.InitiatorAWWN)`' ;`n"
+    $ConfigMemberA.ZoneTargetsA -split ";" | %{$FabricASSHScript += "zonecreate $($ConfigMemberA.AliasNameA)_TO_$($_), `'$($ConfigMemberA.AliasNameA);$($_)`' ;`n"}
+    $ConfigMemberA.ZoneTargetsA -split ";" | %{$FabricASSHScript += "cfgadd cfg, $($ConfigMemberA.AliasNameA)_TO_$($_);`n"}
+    $FabricASSHScript += "echo `'y`' | cfgsave ; echo `'y`' | cfgenable cfg`n"
+
+    $FabricBSSHScript += "alicreate `'$($ConfigMemberB.AliasNameB)`', `'$($ConfigMemberB.InitiatorBWWN)`' ;`n"
+    $ConfigMemberB.ZoneTargetsB -split ";" | %{$FabricBSSHScript += "zonecreate $($ConfigMemberB.AliasNameB)_TO_$($_), `'$($ConfigMemberB.AliasNameB);$($_)`' ;`n"}
+    $ConfigMemberB.ZoneTargetsB -split ";" | %{$FabricBSSHScript += "cfgadd cfg, $($ConfigMemberB.AliasNameB)_TO_$($_);`n"}
+    $FabricBSSHScript += "echo `'y`' | cfgsave ; echo `'y`' | cfgenable cfg`n"
+
+
+    New-SSHSession -ComputerName brocadesw1 -Credential $BrocadeSW1Credential -AcceptKey
+    Invoke-SSHCommand -SSHSession (Get-SSHSession) -Command $FabricASSHScript
+    get-sshsession | Remove-SSHSession
+    New-SSHSession -ComputerName brocadesw2 -Credential $BrocadeSW1Credential -AcceptKey
+    Invoke-SSHCommand -SSHSession (Get-SSHSession) -Command $FabricBSSHScript
+    Get-SSHSession | Remove-SSHSession
 }
