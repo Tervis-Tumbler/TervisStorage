@@ -585,8 +585,8 @@ function Set-BrocadeZoning {
                     $TargetInitiatorB = "Yosemite_SAN_A1;Yosemite_SAN_B0"
                 }
                 "ALL" {
-                    $TargetInitiatorA = "VNX2_A2_P0;VNX2_A2_P1;VNX2_B2_P0;VNX2_B2_P1;Yosemite_SAN_A0;Yosemite_SAN_B1;VNX1_A2;VNX1_B2"
-                    $TargetInitiatorB = "VNX2_A2_P2;VNX2_A2_P3;VNX2_B2_P2;VNX2_B2_P3;Yosemite_SAN_A1;Yosemite_SAN_B0;VNX1_A3;VNX1_B3"
+                    $TargetInitiatorA = "VNX2_A2_P0;VNX2_A2_P1;VNX2_B2_P0;VNX2_B2_P1;Yosemite_SAN_A0;Yosemite_SAN_B1;VNX1_A2;VNX1_B2;MD3860F_SP0_P0;MD3860F_SP1_P0;MD3860F02_SP0_P0;MD3860F02_SP1_P0"
+                    $TargetInitiatorB = "VNX2_A2_P2;VNX2_A2_P3;VNX2_B2_P2;VNX2_B2_P3;Yosemite_SAN_A1;Yosemite_SAN_B0;VNX1_A3;VNX1_B3;MD3860F_SP0_P1;MD3860F_SP1_P1;MD3860F02_SP0_P1;MD3860F02_SP1_P1"
                 }
                 "MD3860F01" {
                     $TargetInitiatorA = "MD3860F_SP0_P0;MD3860F_SP1_P0"
@@ -797,8 +797,8 @@ function Set-BrocadeZoningAuto {
                 $TargetInitiatorB = "Yosemite_SAN_A1;Yosemite_SAN_B0"
             }
             "ALL" {
-                $TargetInitiatorA = "VNX2_A2_P0;VNX2_A2_P1;VNX2_B2_P0;VNX2_B2_P1;Yosemite_SAN_A0;Yosemite_SAN_B1;VNX1_A2;VNX1_B2"
-                $TargetInitiatorB = "VNX2_A2_P2;VNX2_A2_P3;VNX2_B2_P2;VNX2_B2_P3;Yosemite_SAN_A1;Yosemite_SAN_B0;VNX1_A3;VNX1_B3"
+                    $TargetInitiatorA = "VNX2_A2_P0;VNX2_A2_P1;VNX2_B2_P0;VNX2_B2_P1;Yosemite_SAN_A0;Yosemite_SAN_B1;VNX1_A2;VNX1_B2;MD3860F_SP0_P0;MD3860F_SP1_P0;MD3860F02_SP0_P0;MD3860F02_SP1_P0"
+                    $TargetInitiatorB = "VNX2_A2_P2;VNX2_A2_P3;VNX2_B2_P2;VNX2_B2_P3;Yosemite_SAN_A1;Yosemite_SAN_B0;VNX1_A3;VNX1_B3;MD3860F_SP0_P1;MD3860F_SP1_P1;MD3860F02_SP0_P1;MD3860F02_SP1_P1"
             }
             "MD3860F01" {
                 $TargetInitiatorA = "MD3860F_SP0_P0;MD3860F_SP1_P0"
@@ -809,7 +809,7 @@ function Set-BrocadeZoningAuto {
                 $TargetInitiatorB = "MD3860F02_SP0_P1;MD3860F02_SP1_P1"
             }
 
-
+            `
         }
 
     $FabricDetail.Hostname = $FabricDetail.Hostname -replace "-",""
