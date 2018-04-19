@@ -705,23 +705,25 @@ function Remove-BrocadeZoning {
         ConfirmImpact="High"
     )]
     param(
-        [Parameter(Mandatory)]$Hostname,          
+        [parameter(Mandatory,ValueFromPipeline)]$VM
         
-        [Parameter(Mandatory)]
-        [ValidateSet('VNX5300','VNX2','CX3-20','MD3860F-HQ','MD3860F-P10','ALL')]$SANSelection
+#        [Parameter(Mandatory)]$Hostname,          
+#       
+#        [Parameter(Mandatory)]
+#        [ValidateSet('VNX5300','VNX2','CX3-20','MD3860F-HQ','MD3860F-P10','ALL')]$SANSelection
     )
     begin {
     $TervisBrocadeDetails = Get-TervisBrocadeDetails
-    $Hostname = $Hostname -replace "-",""
     }
     Process {
+        $Computername = $VM.VMName -replace "-",""
         foreach ($Switch in $TervisBrocadeDetails){
+            $ZoningTargetList = Get-TervisStorageZoningTargets -Array All -Fabric $Switch.Fabric
             $TervisBrocadePasswordstateCredential = Get-PasswordstateCredential -PasswordID $Switch.PasswordstateCredentialID
             New-SSHSession -ComputerName $Switch.IPAddress -Credential $TervisBrocadePasswordstateCredential
-            foreach ($Array in $SANSelection){
-                
-                $ZoningTargetList = Get-TervisStorageZoningTargets -Array $Array -Fabric $Switch.Fabric
-                $AliasName = ("$($Hostname.ToUpper())_$($Switch.InitiatorSuffix)")
+#            foreach ($Array in $SANSelection){
+#                $ZoningTargetList = Get-TervisStorageZoningTargets -Array $Array -Fabric $Switch.Fabric
+                $AliasName = ("$($Computername.ToUpper())_$($Switch.InitiatorSuffix)")
                 $ZoningTargets = $ZoningTargetList.targets -split ";"
                 $SSHCommand = ""
                 $ZoningTargets | %{$SSHCommand += "cfgremove `"cfg`", `"$($AliasName)_TO_$($_)`";"}
@@ -731,7 +733,7 @@ function Remove-BrocadeZoning {
                 if ($PSCmdlet.ShouldProcess($Switch.Name,$SSHCommand)){
                    Invoke-SSHCommand -SSHSession $SshSessions -Command "$SSHCommand"
                 }
-            }
+#            }
             
             Remove-SSHSession -SSHSession $SshSessions
         }
