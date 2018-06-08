@@ -285,6 +285,25 @@ function New-VNXLUNSnapshot{
     Invoke-Expression -Command $Command
 }
 
+function Copy-VNXLUNSnapshot{
+    param(
+        [Parameter(Mandatory)]
+        $SnapshotName,
+
+        [Parameter(Mandatory)]
+        $SnapshotCopyName,
+
+        [Parameter(Mandatory)]
+        [ValidateSet(“VNX5200”,”VNX5300")]
+        $TervisStorageArraySelection
+    )
+    $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $TervisStorageArraySelection
+    $TervisStorageArrayPasswordDetails = Get-PasswordstateCredential -PasswordID $TervisStorageArrayDetails.PasswordstateCredentialID -AsPlainText
+
+    $command = "& 'C:\Program Files (x86)\EMC\Navisphere CLI\NaviSECCli.exe' -user $($TervisStorageArrayPasswordDetails.Username) -password $($TervisStorageArrayPasswordDetails.Password) -scope 0 -h $($TervisStorageArrayDetails.IPAddress) snap -copy -id $SnapshotName -name $SnapshotCopyName"
+    Invoke-Expression -Command $Command
+}
+
 function Mount-VNXSnapshot{
     param(
         [Parameter(Mandatory)]
