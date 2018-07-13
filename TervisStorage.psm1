@@ -103,7 +103,7 @@ function Get-TervisStorageArrayDetails{
 #        $StorageProcessor = "SPA"
     )
     $StorageArrayInfo = $TervisStorageArrayInfo | Where name -EQ $StorageArrayName
-    $TervisStorageArrayPasswordDetails = Get-PasswordstateEntryDetails -PasswordID $StorageArrayInfo.PasswordstateCredentialID
+    $TervisStorageArrayPasswordDetails = Get-PasswordstatePassword -ID $StorageArrayInfo.PasswordstateCredentialID
     if ($StorageProcessor -eq "SPA") {$SPIPAddress = $TervisStorageArrayPasswordDetails.GenericField1}
     if ($StorageProcessor -eq "SPB") {$SPIPAddress = $TervisStorageArrayPasswordDetails.GenericField2}
 
@@ -132,7 +132,7 @@ function Get-VNXFileList {
         [Switch]$Today
     )
     $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $StorageArrayName -StorageProcessor $StorageProcessor
-    $TervisStorageArrayPasswordDetails = Get-PasswordstateEntryDetails -PasswordID $TervisStorageArrayDetails.PasswordstateCredentialID
+    $TervisStorageArrayPasswordDetails = Get-PasswordstatePassword -ID $TervisStorageArrayDetails.PasswordstateCredentialID
     $RawGetFileListOutput = & 'C:\Program Files (x86)\EMC\Navisphere CLI\NaviSECCli.exe' -scope 0 -h $($TervisStorageArrayDetails.SPIPAddress) -user $($TervisStorageArrayPasswordDetails.Username) -password $($TervisStorageArrayPasswordDetails.Password) managefiles -list
     $SPFileList = $RawGetFileListOutput | ConvertFrom-String -TemplateFile $PSScriptRoot\VNX_GetFileList_Template
     if ($Today) {
@@ -147,7 +147,7 @@ function invoke-GenerateVNXSPCollect {
         [Parameter(Mandatory)][ValidateSet(“SPA”,”SPB”)]$StorageProcessor
     )
     $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $StorageArrayName -StorageProcessor $StorageProcessor
-    $TervisStorageArrayPasswordDetails = Get-PasswordstateEntryDetails -PasswordID $TervisStorageArrayDetails.PasswordstateCredentialID
+    $TervisStorageArrayPasswordDetails = Get-PasswordstatePassword -ID $TervisStorageArrayDetails.PasswordstateCredentialID
 
     Invoke-Command -ScriptBlock {& 'C:\Program Files (x86)\EMC\Navisphere CLI\NaviSECCli.exe' -scope 0 -h $($TervisStorageArrayDetails.SPIPAddress) -user $($TervisStorageArrayPasswordDetails.Username) -password $($TervisStorageArrayPasswordDetails.Password) spcollect}
 #    & 'C:\Program Files (x86)\EMC\Navisphere CLI\NaviSECCli.exe' -scope 0 -h $TervisStorageArrayPasswordDetails.GenericField2 -user $TervisStorageArrayPasswordDetails.Username -password $TervisStorageArrayPasswordDetails.Password naviseccli spcollect
@@ -159,7 +159,7 @@ function Get-VNXArrayFaults {
         [Parameter(Mandatory)][ValidateSet(“SPA”,”SPB”)]$StorageProcessor
     )
     $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $StorageArrayName    
-    $TervisStorageArrayPasswordDetails = Get-PasswordstateEntryDetails -PasswordID $TervisStorageArrayDetails.PasswordstateCredentialID
+    $TervisStorageArrayPasswordDetails = Get-PasswordstatePassword -ID $TervisStorageArrayDetails.PasswordstateCredentialID
 
     Invoke-Command -ScriptBlock {& 'C:\Program Files (x86)\EMC\Navisphere CLI\NaviSECCli.exe' -scope 0 -h $($TervisStorageArrayDetails.SPIPAddress) -user $($TervisStorageArrayPasswordDetails.Username) -password $($TervisStorageArrayPasswordDetails.Password) -faults -list}
 #    & 'C:\Program Files (x86)\EMC\Navisphere CLI\NaviSECCli.exe' -scope 0 -h $TervisStorageArrayPasswordDetails.GenericField2 -user $TervisStorageArrayPasswordDetails.Username -password $TervisStorageArrayPasswordDetails.Password spcollect
@@ -173,7 +173,7 @@ function Get-SPLogFilesFromVNX{
         [Parameter(Mandatory)]$DestinationPath
     )
     $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $StorageArrayName -StorageProcessor $StorageProcessor
-    $TervisStorageArrayPasswordDetails = Get-PasswordstateEntryDetails -PasswordID $TervisStorageArrayDetails.PasswordstateCredentialID
+    $TervisStorageArrayPasswordDetails = Get-PasswordstatePassword -ID $TervisStorageArrayDetails.PasswordstateCredentialID
 
     Invoke-Command -ScriptBlock {& 'C:\Program Files (x86)\EMC\Navisphere CLI\NaviSECCli.exe' -scope 0 -h $($TervisStorageArrayDetails.SPIPAddress) -user $($TervisStorageArrayPasswordDetails.Username) -password $($TervisStorageArrayPasswordDetails.Password) managefiles -retrieve -path $DestinationPath -file $FileName -o}
 #    & 'C:\Program Files (x86)\EMC\Navisphere CLI\NaviSECCli.exe' -scope 0 -h $TervisStorageArrayPasswordDetails.GenericField2 -user $TervisStorageArrayPasswordDetails.Username -password $TervisStorageArrayPasswordDetails.Password spcollect
@@ -192,7 +192,7 @@ function Get-LUNSFromVNX {
     else{$SanSelectionList = $TervisStorageArraySelection}
     foreach ($Array in $SanSelectionList){
         $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $Array
-        $TervisStorageArrayPasswordDetails = Get-PasswordstateEntryDetails -PasswordID $TervisStorageArrayDetails.PasswordstateCredentialID
+        $TervisStorageArrayPasswordDetails = Get-PasswordstatePassword -ID $TervisStorageArrayDetails.PasswordstateCredentialID
         $RawGetLUNOutput = Invoke-Command -ScriptBlock {& 'C:\Program Files (x86)\EMC\Navisphere CLI\NaviSECCli.exe' -scope 0 -h $TervisStorageArrayDetails.IPAddress -user $TervisStorageArrayPasswordDetails.Username -password $TervisStorageArrayPasswordDetails.Password getlun}
         $LUNOutput = $RawGetLUNOutput | ConvertFrom-String -TemplateFile $PSScriptRoot\VNX_getlun_Template
         $LUNOutput | Add-Member -MemberType NoteProperty -name "Array" -PassThru -Value $Array
@@ -211,7 +211,7 @@ function Get-SnapshotsFromVNX{
     else{$SanSelectionList = $TervisStorageArraySelection}
     foreach ($Array in $SanSelectionList){
         $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $Array
-        $TervisStorageArrayPasswordDetails = Get-PasswordstateEntryDetails -PasswordID $TervisStorageArrayDetails.PasswordstateCredentialID
+        $TervisStorageArrayPasswordDetails = Get-PasswordstatePassword -ID $TervisStorageArrayDetails.PasswordstateCredentialID
         $RawSnapshotOutput = & 'C:\Program Files (x86)\EMC\Navisphere CLI\NaviSECCli.exe' -scope 0 -h $TervisStorageArrayDetails.IPAddress -user $TervisStorageArrayPasswordDetails.Username -password $TervisStorageArrayPasswordDetails.Password snap -list
         $SnapshotOutput = $RawSnapshotOutput | ConvertFrom-String -TemplateFile $PSScriptRoot\VNX_Snapshotlist_Template
         $SnapshotOutput | Add-Member -MemberType NoteProperty -name "Array" -PassThru -Value $Array
@@ -231,7 +231,7 @@ function Get-StorageGroupsFromVNX{
     else{$SanSelectionList = $TervisStorageArraySelection}
     foreach ($Array in $SanSelectionList){
         $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $Array
-        $TervisStorageArrayPasswordDetails = Get-PasswordstateEntryDetails -PasswordID $TervisStorageArrayDetails.PasswordstateCredentialID
+        $TervisStorageArrayPasswordDetails = Get-PasswordstatePassword -ID $TervisStorageArrayDetails.PasswordstateCredentialID
         $RawStorageGroupOutput = & 'C:\Program Files (x86)\EMC\Navisphere CLI\NaviSECCli.exe' -scope 0 -h $TervisStorageArrayDetails.IPAddress -user $TervisStorageArrayPasswordDetails.Username -password $TervisStorageArrayPasswordDetails.Password storagegroup -list
         $output = $RawStorageGroupOutput | ConvertFrom-String -TemplateFile $PSScriptRoot\VNX_StorageGroup_Template.txt
         $LunsFromVNX = Get-LUNSFromVNX -TervisStorageArraySelection $Array
@@ -506,7 +506,7 @@ function Register-UnisphereHost {
     $Command = ""
     foreach ($Array in $SanSelectionList){
         $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $Array
-        $TervisStorageArrayPasswordDetails = Get-PasswordstateEntryDetails -PasswordID $($TervisStorageArrayDetails.PasswordstateCredentialID)
+        $TervisStorageArrayPasswordDetails = Get-PasswordstatePassword -ID $($TervisStorageArrayDetails.PasswordstateCredentialID)
         write-host "`nCreating Storage Groups`n"
         $command += "& 'C:\Program Files (x86)\EMC\Navisphere CLI\NaviSECCli.exe' -user $($TervisStorageArrayPasswordDetails.Username) -password $($TervisStorageArrayPasswordDetails.Password) -scope 0 -h $($TervisStorageArrayDetails.IPAddress) storagegroup -create -gname $($FabricDetail.Hostname) ; `n"
     
