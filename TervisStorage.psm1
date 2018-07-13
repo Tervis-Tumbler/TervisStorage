@@ -279,7 +279,7 @@ function New-VNXLUNSnapshot{
         $TervisStorageArraySelection
     )
     $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $TervisStorageArraySelection
-    $TervisStorageArrayPasswordDetails = Get-PasswordstateCredential -PasswordID $TervisStorageArrayDetails.PasswordstateCredentialID -AsPlainText
+    $TervisStorageArrayPasswordDetails = Get-PasswordstatePassword -ID $TervisStorageArrayDetails.PasswordstateCredentialID
 
     $command = "& 'C:\Program Files (x86)\EMC\Navisphere CLI\NaviSECCli.exe' -user $($TervisStorageArrayPasswordDetails.Username) -password $($TervisStorageArrayPasswordDetails.Password) -scope 0 -h $($TervisStorageArrayDetails.IPAddress) snap -create -res $($LUNID) -name '$SnapshotName'"
     Invoke-Expression -Command $Command
@@ -298,7 +298,7 @@ function Copy-VNXLUNSnapshot{
         $TervisStorageArraySelection
     )
     $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $TervisStorageArraySelection
-    $TervisStorageArrayPasswordDetails = Get-PasswordstateCredential -PasswordID $TervisStorageArrayDetails.PasswordstateCredentialID -AsPlainText
+    $TervisStorageArrayPasswordDetails = Get-PasswordstatePassword -ID $TervisStorageArrayDetails.PasswordstateCredentialID
 
     $command = "& 'C:\Program Files (x86)\EMC\Navisphere CLI\NaviSECCli.exe' -user $($TervisStorageArrayPasswordDetails.Username) -password $($TervisStorageArrayPasswordDetails.Password) -scope 0 -h $($TervisStorageArrayDetails.IPAddress) snap -copy -id $SnapshotName -name $SnapshotCopyName"
     Invoke-Expression -Command $Command
@@ -317,7 +317,7 @@ function Mount-VNXSnapshot{
         $TervisStorageArraySelection
     )
     $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $TervisStorageArraySelection
-    $TervisStorageArrayPasswordDetails = Get-PasswordstateCredential -PasswordID $TervisStorageArrayDetails.PasswordstateCredentialID -AsPlainText
+    $TervisStorageArrayPasswordDetails = Get-PasswordstatePassword -ID $TervisStorageArrayDetails.PasswordstateCredentialID
 
     $command = "& 'C:\Program Files (x86)\EMC\Navisphere CLI\NaviSECCli.exe' -user $($TervisStorageArrayPasswordDetails.Username) -password $($TervisStorageArrayPasswordDetails.Password) -scope 0 -h $($TervisStorageArrayDetails.IPAddress) snap -modify -id $snapshotname -allowReadWrite yes"
     Invoke-Expression -Command $Command
@@ -338,7 +338,7 @@ function Dismount-VNXSnapshot{
         $TervisStorageArraySelection
     )
     $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $TervisStorageArraySelection
-    $TervisStorageArrayPasswordDetails = Get-PasswordstateCredential -PasswordID $TervisStorageArrayDetails.PasswordstateCredentialID -AsPlainText
+    $TervisStorageArrayPasswordDetails = Get-PasswordstatePassword -ID $TervisStorageArrayDetails.PasswordstateCredentialID
 
     $command = "& 'C:\Program Files (x86)\EMC\Navisphere CLI\NaviSECCli.exe' -user $($TervisStorageArrayPasswordDetails.Username) -password $($TervisStorageArrayPasswordDetails.Password) -scope 0 -h $($TervisStorageArrayDetails.IPAddress) lun -detach -l $SMPID"
     Invoke-Expression -Command $Command
@@ -560,8 +560,8 @@ function Set-BrocadeZoning {
     [Parameter(Mandatory, ParameterSetName = "VMZoning")]
     [ValidateSet('VNX5300','VNX2','CX3-20','MD3860F01','MD3860F02','ALL')]$SANSelection
       )
-    $BrocadeSW1Credential = Get-PasswordstateCredential -PasswordID 44
-    $BrocadeSW2Credential = Get-PasswordstateCredential -PasswordID 45
+    $BrocadeSW1Credential = Get-PasswordstatePassword -AsCredential -ID 44
+    $BrocadeSW2Credential = Get-PasswordstatePassword -AsCredential -ID 45
 
         if (-not $FabricDetail){
             $FabricDetail = [PSCustomObject][Ordered] @{
@@ -738,7 +738,7 @@ function Remove-BrocadeZoning {
         $Computername = $VM.VMName -replace "-",""
         foreach ($Switch in $TervisBrocadeDetails){
             $ZoningTargetList = Get-TervisStorageZoningTargets -Array All -Fabric $Switch.Fabric
-            $TervisBrocadePasswordstateCredential = Get-PasswordstateCredential -PasswordID $Switch.PasswordstateCredentialID
+            $TervisBrocadePasswordstateCredential = Get-PasswordstatePassword -AsCredential -ID $Switch.PasswordstateCredentialID
             New-SSHSession -ComputerName $Switch.IPAddress -Credential $TervisBrocadePasswordstateCredential
 #            foreach ($Array in $SANSelection){
 #                $ZoningTargetList = Get-TervisStorageZoningTargets -Array $Array -Fabric $Switch.Fabric
@@ -774,8 +774,8 @@ function Set-BrocadeZoningAuto {
     [Parameter(Mandatory, ParameterSetName = "VMZoning")]
     [ValidateSet('VNX5300','VNX2','CX3-20','MD3860F01','MD3860F02','ALL')]$SANSelection
       )
-    $BrocadeSW1Credential = Get-PasswordstateCredential -PasswordID 44
-    $BrocadeSW2Credential = Get-PasswordstateCredential -PasswordID 45
+    $BrocadeSW1Credential = Get-PasswordstatePassword -AsCredential -ID 44
+    $BrocadeSW2Credential = Get-PasswordstatePassword -AsCredential -ID 45
 
     if (-not $FabricDetail){
         $FabricDetail = [PSCustomObject][Ordered] @{
