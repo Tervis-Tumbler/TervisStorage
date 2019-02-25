@@ -428,37 +428,20 @@ Write-Output $FabricDetail
 
 }
 
-function Register-UnisphereHost {
-      <#
-      .SYNOPSIS
-       Uses object from pipe to register Initiators, and create host and storage group in unisphere for selected SAN.
-    
-      .DESCRIPTION
-      Recieves object via pipe from get-vmwwn command. This object will be used to register Unisphere host, initiators, and storage group for specified SAN.
-      
-      .EXAMPLE
-      PS> get-vmwwn testvm | Register-UnisphereHost -SANSelection VNX2 -IPAddress 10.1.1.1
-      
-      .PARAMETER FabricDetail 
-      Object output from Get-VMWWN command. This supplies hostname and initiators.
-    
-      .PARAMETER SANSelection
-      Specify which SAN to configure - VNC5300, VNX5200, or ALL
-      
-      .PARAMETER IPAddress
-      Specify IP Address of the host being configured. This is the VM or physical machine being added to the SAN.
-      #>
-    
+function Register-UnisphereHost{
       param
       (
       [Parameter(Mandatory=$true, ValueFromPipeline=$true)]
         $FabricDetail,
-      [Parameter(Mandatory=$true)]
+
+        [Parameter(Mandatory=$true)]
         [ValidateSet('VNX5300','VNX2','ALL')]
         $SANSelection,
-      [Parameter(Mandatory=$true)]
+
+        [Parameter(Mandatory=$true)]
         [string]$IPAddress,
-      [switch]$ScriptOnly
+
+        [switch]$ScriptOnly
     
       )
     if (!(Test-Path 'C:\Program Files (x86)\EMC\Navisphere CLI\NaviSECCli.exe'))
@@ -466,53 +449,52 @@ function Register-UnisphereHost {
         write-host "NaviSecCLI.exe not found. Please install NaviSECCLI and try again."
         break
         }
-
-    $VNX5300Detail = New-Object psobject
-    $VNX5300Detail | Add-Member PortListA @( ("a","0"),("b","0"))
-    $VNX5300Detail | Add-Member PortListB @( ("a","1"),("b","1"))
-    $VNX5300Detail | Add-Member SPIP "10.172.248.153"
-    
-    $VNX2Detail = New-Object psobject
-    $VNX2Detail | Add-Member PortListA @( ("a","0"),("a","1"),("b","0"),("b","1") )
-    $VNX2Detail | Add-Member PortListB @( ("a","2"),("a","3"),("b","2"),("b","3") )
-    $VNX2Detail | Add-Member SPIP "10.172.248.160"
+#        $SANDetail = New-Object psobject
+        $SANDetail = @()
+    if (($SANSelection -eq "VNX5300") -or ($SANSelection -eq "ALL")){
+        $SANDetail += [PSCustomObject][Ordered]@{
+            Name = "VNX5300"
+            PortListA = @( ("a","0"),("b","0"))
+            PortListB = @( ("a","1"),("b","1"))
+            SPIP = "10.172.248.153"
+        }
+    }
+    if (($SANSelection -eq "VNX5200") -or ($SANSelection -eq "ALL") ){
+        $SANDetail += [PSCustomObject][Ordered]@{
+            Name = "VNX5200"
+            PortListA = @( ("a","0"),("a","1"),("b","0"),("b","1") )
+            PortListB = @( ("a","2"),("a","3"),("b","2"),("b","3") )
+            SPIP = "10.172.248.160"
+        }
+    }
 
     if($SANSelection -eq "ALL"){
         $SanSelectionList = "vnx5200","vnx5300"
     }
     else{$SanSelectionList = $TervisStorageArraySelection}
     
-    foreach ($Array in $SanSelectionList){
-        
         if($FabricDetail.FabricAWWNSetB)
             {
                 $WWNListA = ($FabricDetail.FabricAWWNSetA,$FabricDetail.FabricAWWNSetB)
-            }
-        Else
-            {
-                $WWNListA = $FabricDetail.FabricAWWPNSetA
-            }
-        if($FabricDetail.FabricBWWNSetB)
-            {
                 $WWNListB = ($FabricDetail.FabricBWWNSetA,$FabricDetail.FabricBWWNSetB)
             }
         Else
             {
-                $WWNListB = $FabricDetail.FabricBWWPNSetA
+                $WWNListA = $FabricDetail.FabricAWWNSetA
+                $WWNListB = $FabricDetail.FabricBWWNSetA
             }
-    }
     
 
     $Command = ""
-    foreach ($Array in $SanSelectionList){
-        $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $Array
+    foreach ($Array in $SANDetail){
+        $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $Array.Name
         $TervisStorageArrayPasswordDetails = Get-PasswordstatePassword -ID $($TervisStorageArrayDetails.PasswordstateCredentialID)
         write-host "`nCreating Storage Groups`n"
         $command += "& 'C:\Program Files (x86)\EMC\Navisphere CLI\NaviSECCli.exe' -user $($TervisStorageArrayPasswordDetails.Username) -password $($TervisStorageArrayPasswordDetails.Password) -scope 0 -h $($TervisStorageArrayDetails.IPAddress) storagegroup -create -gname $($FabricDetail.Hostname) ; `n"
     
         Foreach ($WWN in $WWNListA)
             {
-            Foreach($Port in $SAN.PortListA)
+            Foreach($Port in $Array.PortListA)
                 {
                 $command += "& 'C:\Program Files (x86)\EMC\Navisphere CLI\NaviSECCli.exe' -user $($TervisStorageArrayPasswordDetails.Username) -password $($TervisStorageArrayPasswordDetails.Password) -scope 0 -h $($TervisStorageArrayDetails.IPAddress) storagegroup -setpath -o -gname " `
                 + $FabricDetail.Hostname + `
@@ -525,7 +507,7 @@ function Register-UnisphereHost {
         
         Foreach ($WWN in $WWNListB)
             {
-            Foreach($Port in $SAN.PortListB)
+            Foreach($Port in $Array.PortListB)
                 {
                 $command += "& 'C:\Program Files (x86)\EMC\Navisphere CLI\NaviSECCli.exe' -user $($TervisStorageArrayPasswordDetails.Username) -password $($TervisStorageArrayPasswordDetails.Password) -scope 0 -h $($TervisStorageArrayDetails.IPAddress) storagegroup -setpath -o -gname " `
                 + $FabricDetail.Hostname + `
@@ -538,8 +520,8 @@ function Register-UnisphereHost {
     }
     write-host "`nRegistering initiators with selected SANs`n"
     if($scriptonly){
-        $Command
-    }/
+        write-host $Command
+    }
     else{
         Invoke-Expression -Command $Command
     }
@@ -549,91 +531,65 @@ function Set-BrocadeZoning {
     [CmdletBinding()]
       param
       (
-    [Parameter(Mandatory, ValueFromPipeline, ParameterSetName = "VMZoning")]$FabricDetail,
-
-    [Parameter(Mandatory, ParameterSetName = "PhysicalServerZoning")]$Hostname,          
-
-    [Parameter(Mandatory, ParameterSetName = "PhysicalServerZoning")]$FabricAWWPN,
-    [Parameter(Mandatory, ParameterSetName = "PhysicalServerZoning")]$FabricBWWPN,
-
-    [Parameter(Mandatory, ParameterSetName = "PhysicalServerZoning")]
-    [Parameter(Mandatory, ParameterSetName = "VMZoning")]
-    [ValidateSet('VNX5300','VNX2','CX3-20','MD3860F01','MD3860F02','ALL')]$SANSelection
+    [Parameter(Mandatory, ValueFromPipeline)]$FabricDetail,
+    [Parameter(Mandatory)][ValidateSet('VNX5300','VNX2','MD3860F01','MD3860F02','VNX-ALL','ALL')]$SANSelection
       )
     $BrocadeSW1Credential = Get-PasswordstatePassword -AsCredential -ID 44
     $BrocadeSW2Credential = Get-PasswordstatePassword -AsCredential -ID 45
-
-        if (-not $FabricDetail){
-            $FabricDetail = [PSCustomObject][Ordered] @{
-                Hostname = $Hostname
-                FabricAWWNSetA = $FabricAWWPN
-                FabricBWWNSetA = $FabricBWWPN
+    if($FabricDetail.FabricAWWNSetB)
+    {
+        $InitiatorAWWN = ($FabricDetail.FabricAWWPNSetA + ";" + $FabricDetail.fabricAWWPNSetB)
+        $InitiatorBWWN = ($FabricDetail.FabricBWWPNSetA + ";" + $FabricDetail.FabricBWWPNSetB)
+    }
+    Else
+    {
+        $InitiatorAWWN = ($FabricDetail.FabricAWWPNSetA)
+        $InitiatorBWWN = ($FabricDetail.FabricBWWPNSetA)
+    }
+    switch ($SanSelection)
+        {
+            "VNX-ALL" {
+                $TargetInitiatorA = "VNX1_A2;VNX1_B2;VNX2_A2_P0;VNX2_A2_P1;VNX2_B2_P0;VNX2_B2_P1"
+                $TargetInitiatorB = "VNX1_A3;VNX1_B3;VNX2_A2_P2;VNX2_A2_P3;VNX2_B2_P2;VNX2_B2_P3"
             }
-        }
-    
-        if($FabricDetail.FabricAWWNSetB)
-        {
-            $InitiatorAWWN = ($FabricDetail.FabricAWWPNSetA + ";" + $FabricDetail.fabricAWWPNSetB)
-        }
-        Else
-        {
-            
-            $InitiatorAWWN = $FabricAWWPN
-        }
-        if($FabricDetail.FabricBWWNSetB)
-        {
-            $InitiatorBWWN = ($FabricDetail.FabricBWWPNSetA + ";" + $FabricDetail.FabricBWWPNSetB)
-        }
-        Else
-        {
-            $InitiatorBWWN = $FabricBWWPN
-        }
-    
-        switch ($SanSelection)
-            {
-                "VNX5300" {
-                    $TargetInitiatorA = "VNX1_A2;VNX1_B2"
-                    $TargetInitiatorB = "VNX1_A3;VNX1_B3"
-                }
-                "VNX2" {
-                    $TargetInitiatorA = "VNX2_A2_P0;VNX2_A2_P1;VNX2_B2_P0;VNX2_B2_P1"
-                    $TargetInitiatorB = "VNX2_A2_P2;VNX2_A2_P3;VNX2_B2_P2;VNX2_B2_P3"
-                }
-                "CX3-20" {
-                    $TargetInitiatorA = "Yosemite_SAN_A0;Yosemite_SAN_B1"
-                    $TargetInitiatorB = "Yosemite_SAN_A1;Yosemite_SAN_B0"
-                }
-                "ALL" {
-                    $TargetInitiatorA = "VNX2_A2_P0;VNX2_A2_P1;VNX2_B2_P0;VNX2_B2_P1;Yosemite_SAN_A0;Yosemite_SAN_B1;VNX1_A2;VNX1_B2;MD3860F_SP0_P0;MD3860F_SP1_P0;MD3860F02_SP0_P0;MD3860F02_SP1_P0"
-                    $TargetInitiatorB = "VNX2_A2_P2;VNX2_A2_P3;VNX2_B2_P2;VNX2_B2_P3;Yosemite_SAN_A1;Yosemite_SAN_B0;VNX1_A3;VNX1_B3;MD3860F_SP0_P1;MD3860F_SP1_P1;MD3860F02_SP0_P1;MD3860F02_SP1_P1"
-                }
-                "MD3860F01" {
-                    $TargetInitiatorA = "MD3860F_SP0_P0;MD3860F_SP1_P0"
-                    $TargetInitiatorB = "MD3860F_SP0_P1;MD3860F_SP1_P1"
-                }
-                "MD3860F02" {
-                    $TargetInitiatorA = "MD3860F02_SP0_P0;MD3860F02_SP1_P0"
-                    $TargetInitiatorB = "MD3860F02_SP0_P1;MD3860F02_SP1_P1"
-                }
-
-    
+            "VNX5300" {
+                $TargetInitiatorA = "VNX1_A2;VNX1_B2"
+                $TargetInitiatorB = "VNX1_A3;VNX1_B3"
             }
+            "VNX2" {
+                $TargetInitiatorA = "VNX2_A2_P0;VNX2_A2_P1;VNX2_B2_P0;VNX2_B2_P1"
+                $TargetInitiatorB = "VNX2_A2_P2;VNX2_A2_P3;VNX2_B2_P2;VNX2_B2_P3"
+            }
+            "ALL" {
+                $TargetInitiatorA = "VNX2_A2_P0;VNX2_A2_P1;VNX2_B2_P0;VNX2_B2_P1;VNX1_A2;VNX1_B2;MD3860F_SP0_P0;MD3860F_SP1_P0;MD3860F02_SP0_P0;MD3860F02_SP1_P0"
+                $TargetInitiatorB = "VNX2_A2_P2;VNX2_A2_P3;VNX2_B2_P2;VNX2_B2_P3;VNX1_A3;VNX1_B3;MD3860F_SP0_P1;MD3860F_SP1_P1;MD3860F02_SP0_P1;MD3860F02_SP1_P1"
+            }
+            "MD3860F01" {
+                $TargetInitiatorA = "MD3860F_SP0_P0;MD3860F_SP1_P0"
+                $TargetInitiatorB = "MD3860F_SP0_P1;MD3860F_SP1_P1"
+            }
+            "MD3860F02" {
+                $TargetInitiatorA = "MD3860F02_SP0_P0;MD3860F02_SP1_P0"
+                $TargetInitiatorB = "MD3860F02_SP0_P1;MD3860F02_SP1_P1"
+            }
+
+        }
+
+    $FabricDetail.Hostname = $FabricDetail.Hostname -replace "-",""
+
+    $ConfigMemberA = New-Object psobject
+    $ConfigMemberA | Add-Member InitiatorAName $FabricDetail.Hostname
+    $ConfigMemberA | Add-Member InitiatorAWWN $InitiatorAWWN
+    $ConfigMemberA | Add-Member AliasNameA (($FabricDetail.Hostname).ToUpper() + "_FC0")
+    $ConfigMemberA | Add-Member ZoneNameA ($FabricDetail.Hostname + "_TO_SANS").ToUpper()
+    $ConfigMemberA | Add-Member ZoneTargetsA $TargetInitiatorA
     
-        $FabricDetail.Hostname = $FabricDetail.Hostname -replace "-",""
-    
-        $ConfigMemberA = New-Object psobject
-        $ConfigMemberA | Add-Member InitiatorAName $FabricDetail.Hostname
-        $ConfigMemberA | Add-Member InitiatorAWWN $InitiatorAWWN
-        $ConfigMemberA | Add-Member AliasNameA (($FabricDetail.Hostname).ToUpper() + "_FC0")
-        $ConfigMemberA | Add-Member ZoneNameA ($FabricDetail.Hostname + "_TO_SANS").ToUpper()
-        $ConfigMemberA | Add-Member ZoneTargetsA $TargetInitiatorA
-        
-        $ConfigMemberB = New-Object psobject
-        $ConfigMemberB | Add-Member InitiatorBName $FabricDetail.Hostname
-        $ConfigMemberB | Add-Member InitiatorBWWN $InitiatorBWWN
-        $ConfigMemberB | Add-Member AliasNameB (($FabricDetail.Hostname).ToUpper() + "_FC1")
-        $ConfigMemberB | Add-Member ZoneNameB ($FabricDetail.Hostname + "_TO_SANS").ToUpper()
-        $ConfigMemberB | Add-Member ZoneTargetsB $TargetInitiatorB
+    $ConfigMemberB = New-Object psobject
+    $ConfigMemberB | Add-Member InitiatorBName $FabricDetail.Hostname
+    $ConfigMemberB | Add-Member InitiatorBWWN $InitiatorBWWN
+    $ConfigMemberB | Add-Member AliasNameB (($FabricDetail.Hostname).ToUpper() + "_FC1")
+    $ConfigMemberB | Add-Member ZoneNameB ($FabricDetail.Hostname + "_TO_SANS").ToUpper()
+    $ConfigMemberB | Add-Member ZoneTargetsB $TargetInitiatorB
     
 #    $SSHCommand = "" 
     
