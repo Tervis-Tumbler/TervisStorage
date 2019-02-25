@@ -5,7 +5,7 @@
 },
 [pscustomobject][ordered]@{
     Name="VNX5300"
-    PasswordstateCredentialID = "3982"
+    PasswordstateCredentialID = "2574"
     Hostname = "VNXSPA"
 }
 
@@ -82,7 +82,7 @@ $TervisStorageZoningTargets = [psobject][ordered]@{
 
 function Get-TervisStorageZoningTargets{
     param(
-        #[Parameter()][ValidateSet(“BrocadeSW1”,”BrocadeSW2”)][String]$BrocadeSwitch
+        #[Parameter()][ValidateSet("BrocadeSW1","BrocadeSW2")][String]$BrocadeSwitch
         $Array,
         $Fabric
     )
@@ -98,8 +98,8 @@ function Get-TervisStorageZoningTargets{
 
 function Get-TervisStorageArrayDetails{
     param(
-        [Parameter(Mandatory)][ValidateSet(“VNX5200”,”VNX5300”)][String]$StorageArrayName,
-        [Parameter()][ValidateSet(“SPA”,”SPB”)][string]$StorageProcessor = "SPA"
+        [Parameter(Mandatory)][ValidateSet("VNX5200","VNX5300")][String]$StorageArrayName,
+        [Parameter()][ValidateSet("SPA","SPB")][string]$StorageProcessor = "SPA"
 #        $StorageProcessor = "SPA"
     )
     $StorageArrayInfo = $TervisStorageArrayInfo | Where name -EQ $StorageArrayName
@@ -115,7 +115,7 @@ function Get-TervisStorageArrayDetails{
 
 function Get-TervisBrocadeDetails{
     param(
-        [Parameter()][ValidateSet(“BrocadeSW1”,”BrocadeSW2”)][String]$BrocadeSwitch
+        [Parameter()][ValidateSet("BrocadeSW1","BrocadeSW2")][String]$BrocadeSwitch
     )
     if($BrocadeSwitch){
         $SwitchDefinition = $TervisBrocadeSwitchDefinitions| Where name -EQ $BrocadeSwitch
@@ -127,8 +127,8 @@ function Get-TervisBrocadeDetails{
 
 function Get-VNXFileList {
     param (
-        [Parameter(Mandatory)][ValidateSet(“VNX5200”,”VNX5300”)][String]$StorageArrayName,
-        [Parameter(Mandatory)][ValidateSet(“SPA”,”SPB”)]$StorageProcessor,
+        [Parameter(Mandatory)][ValidateSet("VNX5200","VNX5300")][String]$StorageArrayName,
+        [Parameter(Mandatory)][ValidateSet("SPA","SPB")]$StorageProcessor,
         [Switch]$Today
     )
     $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $StorageArrayName -StorageProcessor $StorageProcessor
@@ -143,8 +143,8 @@ function Get-VNXFileList {
 
 function invoke-GenerateVNXSPCollect {
     param (
-        [Parameter(Mandatory)][ValidateSet(“VNX5200”,”VNX5300”)][String]$StorageArrayName,
-        [Parameter(Mandatory)][ValidateSet(“SPA”,”SPB”)]$StorageProcessor
+        [Parameter(Mandatory)][ValidateSet("VNX5200","VNX5300")][String]$StorageArrayName,
+        [Parameter(Mandatory)][ValidateSet("SPA","SPB")]$StorageProcessor
     )
     $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $StorageArrayName -StorageProcessor $StorageProcessor
     $TervisStorageArrayPasswordDetails = Get-PasswordstatePassword -ID $TervisStorageArrayDetails.PasswordstateCredentialID
@@ -155,8 +155,8 @@ function invoke-GenerateVNXSPCollect {
 
 function Get-VNXArrayFaults {
     param (
-        [Parameter(Mandatory)][ValidateSet(“VNX5200”,”VNX5300”)][String]$StorageArrayName,
-        [Parameter(Mandatory)][ValidateSet(“SPA”,”SPB”)]$StorageProcessor
+        [Parameter(Mandatory)][ValidateSet("VNX5200","VNX5300")][String]$StorageArrayName,
+        [Parameter(Mandatory)][ValidateSet("SPA","SPB")]$StorageProcessor
     )
     $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $StorageArrayName    
     $TervisStorageArrayPasswordDetails = Get-PasswordstatePassword -ID $TervisStorageArrayDetails.PasswordstateCredentialID
@@ -167,8 +167,8 @@ function Get-VNXArrayFaults {
 
 function Get-SPLogFilesFromVNX{
     param (
-        [Parameter(Mandatory)][ValidateSet(“VNX5200”,”VNX5300”,"All")][String]$StorageArrayName,
-        [Parameter(Mandatory)][ValidateSet(“SPA”,”SPB”)]$StorageProcessor,
+        [Parameter(Mandatory)][ValidateSet("VNX5200","VNX5300","All")][String]$StorageArrayName,
+        [Parameter(Mandatory)][ValidateSet("SPA","SPB")]$StorageProcessor,
         [Parameter(Mandatory)]$FileName,
         [Parameter(Mandatory)]$DestinationPath
     )
@@ -182,7 +182,7 @@ function Get-SPLogFilesFromVNX{
 function Get-LUNSFromVNX {
     param(
         [Parameter(Mandatory)]
-        [ValidateSet(“VNX5200”,”VNX5300","All")]
+        [ValidateSet("VNX5200","VNX5300","All")]
         $TervisStorageArraySelection
     )
 
@@ -202,7 +202,7 @@ function Get-LUNSFromVNX {
 function Get-SnapshotsFromVNX{
     param(
         [Parameter(Mandatory)]
-        [ValidateSet(“VNX5200”,”VNX5300","ALL")]
+        [ValidateSet("VNX5200","VNX5300","ALL")]
         $TervisStorageArraySelection
     )
     if($TervisStorageArraySelection -eq "ALL"){
@@ -222,7 +222,7 @@ function Get-SnapshotsFromVNX{
 function Get-StorageGroupsFromVNX{
     param(
         [Parameter(Mandatory)]
-        [ValidateSet(“VNX5200”,”VNX5300","ALL")]
+        [ValidateSet("VNX5200","VNX5300","ALL")]
         $TervisStorageArraySelection
     )
     if($TervisStorageArraySelection -eq "ALL"){
@@ -275,7 +275,7 @@ function New-VNXLUNSnapshot{
         $SnapshotName,
 
         [Parameter(Mandatory)]
-        [ValidateSet(“VNX5200”,”VNX5300")]
+        [ValidateSet("VNX5200","VNX5300")]
         $TervisStorageArraySelection
     )
     $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $TervisStorageArraySelection
@@ -294,7 +294,7 @@ function Copy-VNXLUNSnapshot{
         $SnapshotCopyName,
 
         [Parameter(Mandatory)]
-        [ValidateSet(“VNX5200”,”VNX5300")]
+        [ValidateSet("VNX5200","VNX5300")]
         $TervisStorageArraySelection
     )
     $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $TervisStorageArraySelection
@@ -313,7 +313,7 @@ function Mount-VNXSnapshot{
         $SnapshotName,
 
         [Parameter(Mandatory)]
-        [ValidateSet(“VNX5200”,”VNX5300")]
+        [ValidateSet("VNX5200","VNX5300")]
         $TervisStorageArraySelection
     )
     $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $TervisStorageArraySelection
@@ -334,7 +334,7 @@ function Dismount-VNXSnapshot{
         $SMPID,
 
         [Parameter(Mandatory)]
-        [ValidateSet(“VNX5200”,”VNX5300")]
+        [ValidateSet("VNX5200","VNX5300")]
         $TervisStorageArraySelection
     )
     $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $TervisStorageArraySelection
