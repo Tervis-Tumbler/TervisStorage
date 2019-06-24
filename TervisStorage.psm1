@@ -822,3 +822,22 @@ function Set-BrocadeZoningAuto {
     Invoke-SSHCommand -SSHSession (Get-SSHSession) -Command $FabricBSSHScript
     Get-SSHSession | Remove-SSHSession
 }
+
+function Set-VNXLUNSize{
+    param(
+        [Parameter(Mandatory,ValueFromPipelineByPropertyName)]
+        $LUNID,
+
+        [Parameter(Mandatory)]
+        $Capacity,
+
+        [Parameter(Mandatory)]
+        [ValidateSet("VNX5200","VNX5300")]
+        $TervisStorageArraySelection
+    )
+    $TervisStorageArrayDetails = Get-TervisStorageArrayDetails -StorageArrayName $TervisStorageArraySelection
+    $TervisStorageArrayPasswordDetails = Get-PasswordstatePassword -ID $TervisStorageArrayDetails.PasswordstateCredentialID
+
+    $command = "& 'C:\Program Files (x86)\EMC\Navisphere CLI\NaviSECCli.exe' -user $($TervisStorageArrayPasswordDetails.Username) -password $($TervisStorageArrayPasswordDetails.Password) -scope 0 -h $($TervisStorageArrayDetails.IPAddress) lun -expand -l $LUNID -capacity $Capacity"
+    Invoke-Expression -Command $Command
+}
