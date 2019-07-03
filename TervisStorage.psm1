@@ -841,3 +841,67 @@ function Set-VNXLUNSize{
     $command = "& 'C:\Program Files (x86)\EMC\Navisphere CLI\NaviSECCli.exe' -user $($TervisStorageArrayPasswordDetails.Username) -password $($TervisStorageArrayPasswordDetails.Password) -scope 0 -h $($TervisStorageArrayDetails.IPAddress) lun -expand -l $LUNID -capacity $Capacity"
     Invoke-Expression -Command $Command
 }
+
+function Get-TervisVMStorageInCSVsByArray {
+    
+    $VMListFromTrelloCritical = Get-VMsFromHyperVTrelloBoard -BoardName 'Need To Keep - Critical'
+    $VMListFromTrelloNonCritical = Get-VMsFromHyperVTrelloBoard -BoardName 'Need To Keep - Non Critical'
+
+    $ProductionCriticalVMs = $VMListFromTrelloCritical
+    $ProductionNonCriticalVMs = $VMListFromTrelloNonCritical | where {($_.name -NotMatch "eps-") -and ($_.name -notmatch "dlt-")}
+    $NonProductionNonCriticalVMs = $VMListFromTrelloNonCritical | where {($_.name -Match "eps-") -or ($_.name -match "dlt-")}
+
+    $ProductionVMTrelloList = $ProductionCriticalVMs + $ProductionNonCriticalVMs
+    $NonProductionVMTrelloList = $NonProductionNonCriticalVMs
+
+    $ProductionVMs = foreach ($ProdVMListName in $ProductionVMTrelloList){
+        Find-TervisVM -Name $ProdVMListName.name | Get-TervisVM
+    }
+
+    $NonProductionVMs = foreach ($NonProdVMListName in $NonProductionVMTrelloList){
+        Find-TervisVM -Name $NonProdVMListName.name | Get-TervisVM
+    }
+
+    $LUNsOn5300 = Get-LUNSFromVNX -TervisStorageArraySelection VNX5300
+    $LUNsOn5200 = Get-LUNSFromVNX -TervisStorageArraySelection VNX5200
+    $CSVs = Get-ClusterSharedVolume -Cluster hypervcluster5
+    $CSVs5300 = $CSVs | where name -match "5300"
+    $CSVs5200 = $CSVs | where name -match "5200"
+
+    $ProductionVHDson5300 = foreach($VM in $ProductionVMs){
+        Get-VHD -ComputerName $VM.computername -VMId $VM.vmid | where {(($_.path.Split("\"))[0..2] -join "\") -in $CSVs5300.SharedVolumeInfo.friendlyvolumename}
+
+    }
+    $ProductionVHDson5200 = foreach($VM in $ProductionVMs){
+        Get-VHD -ComputerName $VM.computername -VMId $VM.vmid | where {(($_.path.Split("\"))[0..2] -join "\") -in $CSVs5200.SharedVolumeInfo.friendlyvolumename}
+
+    }
+    $NonProductionVHDson5300 = foreach($VM in $NonProductionVMs){
+        Get-VHD -ComputerName $VM.computername -VMId $VM.vmid | where {(($_.path.Split("\"))[0..2] -join "\") -in $CSVs5300.SharedVolumeInfo.friendlyvolumename}
+
+    }
+    $NonProductionVHDson5200 = foreach($VM in $NonProductionVMs){
+        Get-VHD -ComputerName $VM.computername -VMId $VM.vmid | where {(($_.path.Split("\"))[0..2] -join "\") -in $CSVs5200.SharedVolumeInfo.friendlyvolumename}
+
+    }
+    [pscustomobject]@{
+        Environment = "Production"
+        Array = "VNX5300"
+        Size = (($ProductionVHDson5300 | Measure-Object -Property filesize -sum).sum / 1GB).ToString("#")
+    },
+    [pscustomobject]@{
+        Environment = "Production"
+        Array = "VNX5200"
+        Size = (($ProductionVHDson5200 | Measure-Object -Property filesize -sum).sum / 1GB).ToString("#")
+    },
+    [pscustomobject]@{
+        Environment = "Non-Production"
+        Array = "VNX5300"
+        Size = (($NonProductionVHDson5300 | Measure-Object -Property filesize -sum).sum / 1GB).ToString("#")
+    },
+    [pscustomobject]@{
+        Environment = "Non-Production"
+        Array = "VNX5200"
+        Size = (($NonProductionVHDson5200 | Measure-Object -Property filesize -sum).sum / 1GB).ToString("#")
+    }
+}
