@@ -1,0 +1,129 @@
+Storage Group Name:    {StorageGroupName*:OVMC2N12}
+Storage Group UID:     57:ED:D4:A0:E3:22:E4:11:BA:33:00:60:16:41:4C:1B
+HBA/SP Pairs:
+
+  HBA UID                                          SP Name     SPPort
+  -------                                          -------     ------ 
+  20:00:00:25:B5:10:00:AE:20:00:00:25:B5:1A:00:4D   SP A         1
+  20:00:00:25:B5:10:00:AE:20:00:00:25:B5:1A:00:5D   SP A         0
+  20:00:00:25:B5:10:00:AE:20:00:00:25:B5:1A:00:4D   SP B         1
+  20:00:00:25:B5:10:00:AE:20:00:00:25:B5:1A:00:5D   SP B         0
+
+HLU/ALU Pairs:
+
+  HLU Number     ALU Number
+  ----------     ----------
+    {LUNS:{HLUNumber*:0}               {ALUNumber:1095}
+    {HLUNumber*:2}               {ALUNumber:1882}
+    {HLUNumber*:4}               {ALUNumber:1520}
+    {HLUNumber*:10}              {ALUNumber:1055}
+    {HLUNumber*:11}              {ALUNumber:1076}
+    {HLUNumber*:100}             {ALUNumber:1071}
+    {HLUNumber*:101}             {ALUNumber:1804}}
+Shareable:             YES
+
+Storage Group Name:    {StorageGroupName*:Commvault}
+Storage Group UID:     F6:7B:FA:21:69:5B:E2:11:9F:49:00:60:16:41:4C:91
+HBA/SP Pairs:
+
+  HBA UID                                          SP Name     SPPort
+  -------                                          -------     ------
+  iqn.1991-05.com.microsoft:commvault.tervis.prv    SP A         6
+  iqn.1991-05.com.microsoft:commvault.tervis.prv    SP B         6
+  iqn.1991-05.com.microsoft:commvault.tervis.prv    SP A         7
+  iqn.1991-05.com.microsoft:commvault.tervis.prv    SP B         7
+Shareable:             YES
+
+Storage Group Name:    {StorageGroupName*:M-Webnode01}
+Storage Group UID:     1E:2A:F9:EF:19:D5:E2:11:9F:E7:00:60:16:41:4C:91
+HBA/SP Pairs:
+
+  HBA UID                                          SP Name     SPPort
+  -------                                          -------     ------ 
+  iqn.1991-05.com.microsoft:m-webnode01.tervis.prv  SP A         6
+  iqn.1991-05.com.microsoft:m-webnode01.tervis.prv  SP B         6
+  iqn.1991-05.com.microsoft:m-webnode01.tervis.prv  SP A         7
+  iqn.1991-05.com.microsoft:m-webnode01.tervis.prv  SP B         7
+Shareable:             YES
+
+Storage Group Name:    {StorageGroupName*:SQLC1N2}
+Storage Group UID:     8C:4E:B2:09:56:DF:E1:11:9F:49:00:60:16:41:4C:91
+HBA/SP Pairs:
+
+  HBA UID                                          SP Name     SPPort
+  -------                                          -------     ------ 
+  20:00:00:1B:32:9D:A0:E1:21:00:00:1B:32:9D:A0:E1   SP A         0
+  20:00:00:1B:32:9D:A0:E1:21:00:00:1B:32:9D:A0:E1   SP B         0
+  20:01:00:1B:32:BD:A0:E1:21:01:00:1B:32:BD:A0:E1   SP A         1
+  20:01:00:1B:32:BD:A0:E1:21:01:00:1B:32:BD:A0:E1   SP B         1
+Shareable:             YES
+
+Storage Group Name:     {StorageGroupName*:HyperVC5N4}
+Storage Group UID:     28:68:40:07:29:88:E3:11:BA:33:00:60:16:41:4C:1B
+HBA/SP Pairs:
+
+  HBA UID                                          SP Name     SPPort
+  -------                                          -------     ------ 
+  20:00:00:25:B5:10:00:3F:20:00:00:25:B5:1A:00:4F   SP A         1
+  20:00:00:25:B5:10:00:3F:20:00:00:25:B5:1A:00:5F   SP A         0
+  20:00:00:25:B5:10:00:3F:20:00:00:25:B5:1A:00:4F   SP B         1
+  20:00:00:25:B5:10:00:3F:20:00:00:25:B5:1A:00:5F   SP B         0
+
+HLU/ALU Pairs:
+
+  HLU Number     ALU Number
+  ----------     ----------
+    {LUNS:{HLUNumber*:0}               {ALUNumber:1784}
+    {HLUNumber*:7}               {ALUNumber:1755}
+    {HLUNumber*:9}               {ALUNumber:1797}
+    {HLUNumber*:10}              {ALUNumber:1798}
+    {HLUNumber*:11}              {ALUNumber:1776}
+    {HLUNumber*:4}               {ALUNumber:1795}}
+Shareable:             YES
+
+Storage Group Name:    {StorageGroupName*:Snaps Group}
+Storage Group UID:     98:86:63:37:A3:A6:E1:11:BF:84:00:60:16:41:4C:91
+Shareable:             YES
+
+Storage Group Name:    {StorageGroupName*:HyperVC1N4}
+Storage Group UID:     D2:7D:0C:1F:CA:EA:E1:11:9F:49:00:60:16:41:4C:91
+HBA/SP Pairs:
+
+  HBA UID                                          SP Name     SPPort
+  -------                                          -------     ------
+  20:00:00:25:B5:10:00:3F:20:00:00:25:B5:1A:00:EF   SP A         1
+  20:00:00:25:B5:10:00:3F:20:00:00:25:B5:1A:00:FF   SP A         0
+  20:00:00:25:B5:10:00:3F:20:00:00:25:B5:1A:00:EF   SP B         1
+  20:00:00:25:B5:10:00:3F:20:00:00:25:B5:1A:00:FF   SP B         0
+
+HLU/ALU Pairs:
+
+  HLU Number     ALU Number
+  ----------     ----------
+    {LUNS:{HLUNumber*:0}               {ALUNumber:304}}
+Shareable:             YES
+
+Storage Group Name:    {StorageGroupName*:OVMC2N13}
+Storage Group UID:     02:75:8F:C4:E3:22:E4:11:81:B0:00:60:16:68:C5:73
+HBA/SP Pairs:
+
+  HBA UID                                          SP Name     SPPort
+  -------                                          -------     ------ 
+  20:00:00:25:B5:10:00:8E:20:00:00:25:B5:1A:00:3D   SP A         1
+  20:00:00:25:B5:10:00:8E:20:00:00:25:B5:1A:00:2D   SP B         2
+  20:00:00:25:B5:10:00:8E:20:00:00:25:B5:1A:00:3D   SP B         1
+  20:00:00:25:B5:10:00:8E:20:00:00:25:B5:1A:00:2D   SP A         3
+  20:00:00:25:B5:10:00:8E:20:00:00:25:B5:1A:00:2D   SP B         3
+  20:00:00:25:B5:10:00:8E:20:00:00:25:B5:1A:00:3D   SP A         0
+  20:00:00:25:B5:10:00:8E:20:00:00:25:B5:1A:00:3D   SP B         0
+  20:00:00:25:B5:10:00:8E:20:00:00:25:B5:1A:00:2D   SP A         2
+
+HLU/ALU Pairs:
+
+  HLU Number     ALU Number
+  ----------     ----------
+    {LUNS:{HLUNumber*:126}             {ALUNumber:11}
+    {HLUNumber*:127}             {ALUNumber:10}
+    {HLUNumber*:122}             {ALUNumber:3}
+    {HLUNumber*:1}               {ALUNumber:32}}
+Shareable:             YES

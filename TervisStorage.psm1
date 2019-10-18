@@ -905,3 +905,123 @@ function Get-TervisVMStorageInCSVsByArray {
         Size = (($NonProductionVHDson5200 | Measure-Object -Property filesize -sum).sum / 1GB).ToString("#")
     }
 }
+
+function Get-BrocadeZoningAliasRecord {
+    [CmdletBinding()]
+      param
+      (
+    [Parameter(Mandatory, ValueFromPipeline)]$ComputerName
+      )
+    $BrocadeSW1Credential = Get-PasswordstatePassword -AsCredential -ID 44
+    $BrocadeSW2Credential = Get-PasswordstatePassword -AsCredential -ID 45
+    $BrocadeSW1SSHSession = New-SSHSession -ComputerName brocadesw1 -Credential $BrocadeSW1Credential -AcceptKey
+    $BrocadeSW2SSHSession = New-SSHSession -ComputerName brocadesw2 -Credential $BrocadeSW1Credential -AcceptKey
+    $ComputerNameInBrocadeFormat = ($ComputerName -replace "-","").ToUpper()
+
+    $AliasNameA = ($ComputerNameInBrocadeFormat + "_FC0")
+    $AliasNameB = ($ComputerNameInBrocadeFormat + "_FC1")
+
+    if(Computername){
+        $SSHCommand = "alishow '*$ComputerNameInBrocadeFormat*'"
+    }
+    elseif(WWPN){
+        $SSHCommand = "alishow '$WWPN'"
+    }
+
+    $BrocadeAliShowTemplate = @"
+ alias: {Alias*:INFHYPERVC5N13_FC0}
+                {WWPN:20:00:00:25:b5:1a:00:1b}
+ alias: INFHYPERVC5N14_FC0
+                20:00:00:25:b5:1a:00:da
+ alias: INFHYPERVC5N15_FC0
+                20:00:00:25:b5:1a:00:ba
+ alias: {Alias*:INFHYPERVC5N16_FC1}
+                20:00:00:25:b5:1a:00:bf
+ alias: INFHYPERVC6N10_FC0
+                21:00:00:1b:32:9d:a0:e1
+ alias: INFHYPERVC6N11_FC1
+                21:00:00:1b:32:9d:55:dc
+"@
+    $FabricAOutput = (Invoke-SSHCommand -SSHSession $BrocadeSW1SSHSession -Command $SSHCommand)
+    $FabricBOutput = (Invoke-SSHCommand -SSHSession $BrocadeSW2SSHSession -Command $SSHCommand) 
+
+
+
+    $FabricAOutput | %{
+        $ParsedOutput = $_.output | ConvertFrom-String -TemplateContent $BrocadeAliShowTemplate
+        [PSCustomObject]@{
+            SwitchName = $_.Host
+            AliasName = $ParsedOutput.Alias
+            WWPN = $ParsedOutput.WWPN
+        }
+    }
+    $FabricBOutput | %{
+        $ParsedOutput = $_.output | ConvertFrom-String -TemplateContent $BrocadeAliShowTemplate
+        [PSCustomObject]@{
+            SwitchName = $_.Host
+            AliasName = $ParsedOutput.Alias
+            WWPN = $ParsedOutput.WWPN
+        }
+    }
+
+    Get-SSHSession | Remove-SSHSession | Out-Null
+}
+
+function Get-BrocadeZoningZoneRecord {
+    [CmdletBinding()]
+      param
+      (
+    [Parameter(Mandatory, ValueFromPipeline)]$ComputerName
+      )
+    $BrocadeSW1Credential = Get-PasswordstatePassword -AsCredential -ID 44
+    $BrocadeSW2Credential = Get-PasswordstatePassword -AsCredential -ID 45
+    $BrocadeSW1SSHSession = New-SSHSession -ComputerName brocadesw1 -Credential $BrocadeSW1Credential -AcceptKey
+    $BrocadeSW2SSHSession = New-SSHSession -ComputerName brocadesw2 -Credential $BrocadeSW1Credential -AcceptKey
+    $ComputerNameInBrocadeFormat = ($ComputerName -replace "-","").ToUpper()
+
+    $AliasNameA = ($ComputerNameInBrocadeFormat + "_FC0")
+    $AliasNameB = ($ComputerNameInBrocadeFormat + "_FC1")
+
+    $SSHCommand = "zoneshow '*$ComputerNameInBrocadeFormat*'"
+    $FabricBSSHScript = "zoneshow '*$ComputerNameInBrocadeFormat*'"
+
+    $BrocadeZoneShowTemplate = @"
+ zone:  {Zone*:INFHYPERVC5N16_FC0_TO_MD3860F02_SP0_P0}
+                {Members:INFHYPERVC5N16_FC0; MD3860F02_SP0_P0}
+ zone:  INFHYPERVC5N16_FC0_TO_MD3860F_SP0_P0
+                INFHYPERVC5N16_FC0; MD3860F_SP0_P0
+ zone:  {Zone*:INFHYPERVC5N16_FC0_TO_VNX1_A2}
+                {Members:INFHYPERVC5N16_FC0; VNX1_A2}
+ zone:  INFHYPERVC5N16_FC0_TO_VNX2_A2_P0
+                INFHYPERVC5N16_FC0; VNX2_A2_P0
+ zone:  {Zone*:SQL_FC0_TO_MD3860F_SP0_P0}
+                {Members:SQL_FC0; MD3860F_SP0_P0}
+ zone:  SQL_FC0_TO_MD3860F_SP1_P0
+                SQL_FC0; MD3860F_SP1_P0
+ zone:  {Zone*:INFSCDPMSQL01_FC0_TO_MD3860F_SP0_P0}
+                {Members:INFSCDPMSQL01_FC0; MD3860F_SP0_P0}
+"@
+    $FabricAOutput = (Invoke-SSHCommand -SSHSession $BrocadeSW1SSHSession -Command $SSHCommand)
+    $FabricBOutput = (Invoke-SSHCommand -SSHSession $BrocadeSW2SSHSession -Command $FabricBSSHScript) 
+
+
+
+    $FabricAOutput | %{
+        $ParsedOutput = $_.output | ConvertFrom-String -TemplateContent $BrocadeZoneShowTemplate
+        [PSCustomObject]@{
+            SwitchName = $_.Host
+            ZoneName = $ParsedOutput.Zone
+            Members = $ParsedOutput.Members
+        }
+    }
+    $FabricBOutput | %{
+        $ParsedOutput = $_.output | ConvertFrom-String -TemplateContent $BrocadeZoneShowTemplate
+        [PSCustomObject]@{
+            SwitchName = $_.Host
+            ZoneName = $ParsedOutput.Zone
+            Members = $ParsedOutput.Members
+        }
+    }
+
+    Get-SSHSession | Remove-SSHSession | Out-Null
+}
