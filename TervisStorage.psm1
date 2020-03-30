@@ -72,11 +72,11 @@ $TervisStorageZoningTargets = [psobject][ordered]@{
     Array = "MD3860F-P10"
     Initiators = [psobject][ordered]@{
         Name = "FabricA"
-        Targets = "MD3860F_P10_SP0_P0;MD3860F_P10_SP1_P0"
+        Targets = "MD3860F02_SP0_P0;MD3860F_P10_SP1_P0"
     },
     [psobject][ordered]@{
         Name = "FabricB"
-        Targets = "MD3860F_P10_SP0_P1;MD3860F_P10_SP1_P1"
+        Targets = "MD3860F02_SP0_P1;MD3860F_P10_SP1_P1"
     }
 }
 
@@ -680,7 +680,8 @@ function Remove-BrocadeZoning {
         ConfirmImpact="High"
     )]
     param(
-        [parameter(Mandatory,ValueFromPipeline)]$VM
+        [parameter(Mandatory,ValueFromPipeline)]$VM,
+        [switch]$ScriptOnly
         
 #        [Parameter(Mandatory)]$Hostname,          
 #       
@@ -705,10 +706,14 @@ function Remove-BrocadeZoning {
                 $ZoningTargets | %{$SSHCommand += "zonedelete `"$($AliasName)_TO_$($_)`";"}
                 $SSHCommand += "alidelete `'$AliasName`';"
                 $SSHCommand += "echo `'y`' | cfgsave ; echo `'y`' | cfgenable cfg"
-                if ($PSCmdlet.ShouldProcess($Switch.Name,$SSHCommand)){
-                   Invoke-SSHCommand -SSHSession $SshSessions -Command "$SSHCommand"
+                if($ScriptOnly){
+                        $SSHCommand
                 }
-#            }
+                else{
+                    if ($PSCmdlet.ShouldProcess($Switch.Name,$SSHCommand)){
+                        Invoke-SSHCommand -SSHSession $SshSessions -Command "$SSHCommand"
+                    }
+                }
             
             Remove-SSHSession -SSHSession $SshSessions
         }
