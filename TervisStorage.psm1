@@ -1,4 +1,4 @@
-$TervisStorageArrayInfo = [pscustomobject][ordered]@{
+﻿$TervisStorageArrayInfo = [pscustomobject][ordered]@{
     Name="VNX5200"
     PasswordstateCredentialID = "2574"
     Hostname = "VNX2SPA"
@@ -851,7 +851,7 @@ function Get-TervisVMStorageInCSVsByArray {
     $GlobalVMs = Find-TervisVM -ClusterName hypervcluster5
     $ProductionVMsRaw = $GlobalVMs | where {($_.name -NotMatch "eps-") -and ($_.name -notmatch "dlt-")}
     $NonProductionVMsRaw = $GlobalVMs | where {($_.name -Match "eps-") -or ($_.name -match "dlt-")}
-    
+
     $ProductionVMs = foreach ($ProdVM in $ProductionVMsRaw){
         $ProdVM | Get-TervisVM
     }
@@ -896,13 +896,13 @@ function Get-TervisVMStorageInCSVsByArray {
                 Array = (($CSVs | where {(($VHD.path.Split("\"))[0..2] -join "\") -in $_.FriendlyName}).Name).replace(')',"").split(" ") | select -last 1
             }
             $VHDTotalSize += $VHD.Size
-    }
+        }
         [PSCustomObject]@{
             VMName = $VM.Name
             VHDTotalSize = ($VHDTotalSize / 1GB)
             Array = $VHDDetails.Array | Sort-Object -Unique
             VHDDetails = $VHDDetails
-    }
+        }
     }
 
     $CSVUtilizationByArray = [pscustomobject]@{
