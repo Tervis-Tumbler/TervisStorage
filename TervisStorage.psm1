@@ -873,10 +873,10 @@ function Get-TervisVMStorageInCSVsByArray {
             [PSCustomObject]@{
                 Volume = ($VHD.path.split("\"))[2]
                 Path = $VHD.Path
-                Size = ($VHD.Size / 1GB).ToString("0.00")
+                Size = ($VHD.FileSize / 1GB).ToString("0.00")
                 Array = (($CSVs | where {(($VHD.path.Split("\"))[0..2] -join "\") -in $_.FriendlyName}).Name).replace(')',"").split(" ") | select -last 1
             }
-            $VHDTotalSize += $VHD.Size
+            $VHDTotalSize += $VHD.FileSize
         }
         [PSCustomObject]@{
             VMName = $VM.Name
