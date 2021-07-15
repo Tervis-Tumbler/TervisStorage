@@ -5,7 +5,7 @@
 },
 [pscustomobject][ordered]@{
     Name="VNX5300"
-    PasswordstateCredentialID = "2574"
+    PasswordstateCredentialID = "6446"
     Hostname = "VNXSPA"
 }
 
@@ -1048,4 +1048,173 @@ function Get-BrocadeZoningZoneRecord {
     }
 
     Get-SSHSession | Remove-SSHSession | Out-Null
+}
+
+function Get-VSSSnapshots {
+    param(
+        [parameter(mandatory)]$ComputerName
+    )
+    
+    $ShadowCopies = Get-WmiObject Win32_Shadowcopy -ComputerName $ComputerName
+    
+    $ShadowCopies | %{
+        $_ | Add-Member -MemberType NoteProperty -Name SnapshotTimeStamp -Value ([management.managementDateTimeConverter]::ToDateTime($_.installdate))
+    }
+    $ShadowCopies
+}
+
+function Get-VSSSnapshotScheduledTask {
+    param(
+    [Parameter(Mandatory)]$ComputerName,
+    [Parameter(Mandatory)]$VolumeId,
+    $CimSession
+    )
+    if($CimSession){
+        $CimSession = New-CimSession -ComputerName $Computername
+    }
+    Get-ScheduledTask | where TaskName -like "*ShadowCopyVolume*$($VolumeId)"
+    
+    if(-not $CimSession){
+        Remove-CimSession -CimSession $CimSession
+    }
+
+}
+
+function New-VSSSnapshotScheduledTask {
+    param(
+    [Parameter(ParameterSetName="Computername",Mandatory)]$ComputerName,
+    [Parameter(Mandatory)]$VolumeID,
+    [Parameter(Mandatory)]$TaskTrigger,
+    [Parameter(ParameterSetName="CimSession",Mandatory)]$CimSession
+    )
+    $TaskName = "ShadowCopyVolume$VolumeId"
+    if(-not $CimSession){
+        $CimSession = New-CimSession -ComputerName $Computername
+    }
+    if ($ScheduledTask = Get-ScheduledTask -CimSession $CimSession | where TaskName -eq $TaskName) {
+        Unregister-ScheduledTask -CimSession $CimSession -TaskName $ScheduledTask.TaskName
+    }
+    $TaskAction = New-ScheduledTaskAction -Execute "C:\Windows\system32\vssadmin.exe" -Argument "Create Shadow /AutoRetry=15 /For=\\?\Volume$($VolumeId)\" -WorkingDirectory "%systemroot%\system32"
+    $TaskSettings = New-ScheduledTaskSettingsSet
+    
+    Register-ScheduledTask -CimSession $CimSession -TaskName $TaskName -Settings $TaskSettings -Action $TaskAction -Trigger $TaskTrigger -User "NT Authority\SYSTEM" -RunLevel Highest
+
+    if(-not $CimSession){
+        Remove-CimSession -CimSession $CimSession
+    }
+}
+
+function Set-TervisFileserverVSSSnapshotScheduledTask {
+    param(
+        [Parameter(Mandatory)]$Computername,
+        $VolumeId
+    )
+    $CimSession = New-CimSession -ComputerName $Computername
+    $Trigger = @(
+       $(New-ScheduledTaskTrigger -Daily -At 7am),
+       $(New-ScheduledTaskTrigger -Daily -At 3am),
+       $(New-ScheduledTaskTrigger -Daily -At 11pm)
+    )
+    if($VolumeId){
+        New-VSSSnapshotScheduledTask -CimSession $CimSession -TaskTrigger $Trigger -VolumeID $VolumeId
+    }
+    else{
+        $Volumes = Get-Volume -CimSession $cimsession | where {($_.driveletter -ne "C") -and ($_.DriveLetter)}
+        $Volumes | %{
+            $VolumeId = $_.Path | Select-String -Pattern '{[-0-9A-F]+?}' -AllMatches | Select-Object -ExpandProperty Matches | Select-Object -ExpandProperty Value
+            New-VSSSnapshotScheduledTask -CimSession $CimSession -TaskTrigger $Trigger -VolumeID $VolumeId
+        }
+    }
+
+    Remove-CimSession $CimSession
+}
+
+function Get-VSSProvider {
+    param(
+        [parameter(mandatory)]$ComputerName
+    )
+    gwmi Win32_ShadowProvider -ComputerName $ComputerName
+}
+
+function Get-VSSContext {
+    param(
+        [parameter(mandatory)]$ComputerName    )
+    gwmi Win32_ShadowContext -ComputerName $ComputerName
+}
+
+function Get-VolumesWithVSSData {
+    param(
+        [parameter(ParameterSetName="Computername",mandatory)]$ComputerName,
+        [parameter(ParameterSetName="CimSession",mandatory)]$CimSession
+    )
+    if(-not $CimSession){
+        $CimSession = New-CimSession -ComputerName $Computername
+    }
+    $Volumes = Get-Volume -CimSession $CimSession | where {($_.DriveLetter -ne "C") -and ($_.Driveletter) -and ($_.DriveType -eq "Fixed")}
+    $VSSSnapshots = Get-VSSSnapshots -CimSession $CimSession
+    $VSSShadowStorageConsumed = Get-WMIObject -ComputerName $CimSession.ComputerName -Class Win32_ShadowStorage | Select-Object @{n=’UsedSpaceGB’;e={[math]::Round([double]$_.UsedSpace/1GB,3)}}, Volume
+    
+    foreach ($Volume in $Volumes) {
+        $VolumeId = $Volume.Path | Select-String -Pattern '{[-0-9A-F]+?}' -AllMatches | Select-Object -ExpandProperty Matches | Select-Object -ExpandProperty Value
+        if((-not ($Snapshots = $VSSSnapshots | where VolumeName -eq $Volume.Path)) -or ($VSSSnapshots.Count -le 1)){
+            $Volumes = $Volumes | where DriveLetter -ne $Volume.DriveLetter
+            Continue
+        }
+        $VSSConsumed = $VSSShadowStorageConsumed | where {$_.Volume -match $VolumeId}
+        $Volume | Add-Member -Name Snapshots -MemberType NoteProperty -Value $Snapshots -Force
+        $Volume | Add-Member -Name VSSConsumed -MemberType NoteProperty -Value $VSSConsumed.UsedSpaceGB -Force
+    }
+    $Volumes
+    if(-not $CimSession){
+        Remove-CimSession -CimSession $CimSession
+    }
+}
+
+function Invoke-CheckFileServerVSSHealth {
+    param(
+        $ComputerName
+    )
+    $VolumesWithVSSData = Get-VolumesWithVSSData -ComputerName $ComputerName
+    foreach($Volume in $volumesWithVssData){
+        $OldestSnapshotDate = $Volume.Snapshots.snapshottimestamp | Sort-Object | select -First 1
+        $NewestSnapshotDate = $Volume.Snapshots.snapshottimestamp | Sort-Object | select -Last 1
+        $DaysRetained = (New-TimeSpan -Start $OldestSnapshotDate -End (get-date -hour 23 -Minute 59)).Days
+        $SnapshotRangeToCalculate = $Volume.Snapshots | where snapshottimestamp -lt (get-date -Hour 00 -Minute 00)
+        $RPOSuccessRate = (($SnapshotRangeToCalculate.count) / ($DaysRetained * 3)) * 100
+        [PSCustomObject]@{
+            VolumeLable = $Volume.FileSystemLabel
+            DriveLetter = $Volume.DriveLetter
+            CapacityGB = "{0:n2}" -f ($Volume.Size / 1GB)
+            AvailableGB = "{0:n2}" -f ($Volume.SizeRemaining / 1GB)
+            OldestSnapshotDate = $OldestSnapshotDate
+            NewestSnapshotDate = $NewestSnapshotDate
+            SnapshotCount = $Volume.Snapshots.Count
+            DaysRetained = $DaysRetained
+            VSSUsedStorageGB = "{0:n2}" -f ($Volume.VSSConsumed)
+            RPSuccessRatio = $RPOSuccessRate.ToString("#.#")
+        }
+    }
+}
+
+function Invoke-PruneVSSSnapshots{
+    param(
+        [parameter(ParameterSetName="Computername",mandatory)]$ComputerName,
+        [parameter(ParameterSetName="CimSession",mandatory)]$CimSession
+    )
+    if(-not $CimSession){
+        $CimSession = New-CimSession -ComputerName $Computername
+    }
+    $VSSSnapshots = Get-VSSSnapshots -CimSession $CimSession
+    $SnapshotsToPrune = $VSSSnapshots | where snapshottimestamp -lt (get-date -Hour 00 -Minute 00).AddDays(-16) | select -first 1
+
+    Invoke-Command -ComputerName $CimSession.ComputerName -ScriptBlock {
+        param(
+            $SnapshotsToPrune
+        )
+        $SnapshotsToPrune | %{& vssadmin /Delete Shadows /Shadow=$($_.ID) /Quiet}
+    } -ArgumentList $SnapshotsToPrune
+
+    if(-not $CimSession){
+        Remove-CimSession $CimSession
+    }
 }
