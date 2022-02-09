@@ -1151,7 +1151,7 @@ function Get-VolumesWithVSSData {
         $CimSession = New-CimSession -ComputerName $Computername
     }
     $Volumes = Get-Volume -CimSession $CimSession | where {($_.DriveLetter -ne "C") -and ($_.Driveletter) -and ($_.DriveType -eq "Fixed")}
-    $VSSSnapshots = Get-VSSSnapshots -CimSession $CimSession
+    $VSSSnapshots = Get-VSSSnapshots -ComputerName $Computername
     $VSSShadowStorageConsumed = Get-WMIObject -ComputerName $CimSession.ComputerName -Class Win32_ShadowStorage | Select-Object @{n=’UsedSpaceGB’;e={[math]::Round([double]$_.UsedSpace/1GB,3)}}, Volume
     
     foreach ($Volume in $Volumes) {
@@ -1172,26 +1172,50 @@ function Get-VolumesWithVSSData {
 
 function Invoke-CheckFileServerVSSHealth {
     param(
-        $ComputerName
+        [parameter(ValueFromPipeline,Mandatory)]$ComputerName,
+        $RetentionPeriodinDays = 21
     )
-    $VolumesWithVSSData = Get-VolumesWithVSSData -ComputerName $ComputerName
-    foreach($Volume in $volumesWithVssData){
-        $OldestSnapshotDate = $Volume.Snapshots.snapshottimestamp | Sort-Object | select -First 1
-        $NewestSnapshotDate = $Volume.Snapshots.snapshottimestamp | Sort-Object | select -Last 1
-        $DaysRetained = (New-TimeSpan -Start $OldestSnapshotDate -End (get-date -hour 23 -Minute 59)).Days
-        $SnapshotRangeToCalculate = $Volume.Snapshots | where snapshottimestamp -lt (get-date -Hour 00 -Minute 00)
-        $RPOSuccessRate = (($SnapshotRangeToCalculate.count) / ($DaysRetained * 3)) * 100
-        [PSCustomObject]@{
-            VolumeLable = $Volume.FileSystemLabel
-            DriveLetter = $Volume.DriveLetter
-            CapacityGB = "{0:n2}" -f ($Volume.Size / 1GB)
-            AvailableGB = "{0:n2}" -f ($Volume.SizeRemaining / 1GB)
-            OldestSnapshotDate = $OldestSnapshotDate
-            NewestSnapshotDate = $NewestSnapshotDate
-            SnapshotCount = $Volume.Snapshots.Count
-            DaysRetained = $DaysRetained
-            VSSUsedStorageGB = "{0:n2}" -f ($Volume.VSSConsumed)
-            RPSuccessRatio = $RPOSuccessRate.ToString("#.#")
+    process{
+        $VolumesWithVSSData = Get-VolumesWithVSSData -ComputerName $ComputerName
+        foreach($Volume in $volumesWithVssData){
+            $OldestSnapshotDate = $Volume.Snapshots.snapshottimestamp | Sort-Object | select -First 1
+            $NewestSnapshotDate = $Volume.Snapshots.snapshottimestamp | Sort-Object | select -Last 1
+            $DaysRetained = (New-TimeSpan -Start $OldestSnapshotDate -End (get-date -hour 23 -Minute 59)).Days
+            $SnapshotRangeToCalculate = $Volume.Snapshots | where snapshottimestamp -lt (get-date -Hour 00 -Minute 00)
+            $RPOSuccessRate = (($SnapshotRangeToCalculate.count) / ($RetentionPeriodinDays * 3)) * 100
+            [PSCustomObject]@{
+                ComputerName = $Volume.PSComputerName
+                VolumeLable = $Volume.FileSystemLabel
+                DriveLetter = $Volume.DriveLetter
+                CapacityGB = "{0:n2}" -f ($Volume.Size / 1GB)
+                AvailableGB = "{0:n2}" -f ($Volume.SizeRemaining / 1GB)
+                OldestSnapshotDate = $OldestSnapshotDate
+                NewestSnapshotDate = $NewestSnapshotDate
+                SnapshotCount = $Volume.Snapshots.Count
+                DaysRetained = $DaysRetained
+                VSSUsedStorageGB = "{0:n2}" -f ($Volume.VSSConsumed)
+                RPSuccessRatio = [system.int32]("{0:#}" -f $RPOSuccessRate) #.ToString("#.#")
+            }
+        }
+    }
+}
+
+function Get-AzureBackupStatus {
+    param(
+        [parameter(ValueFromPipeline,Mandatory)]$Computername
+    )
+    process{
+        invoke-command -ComputerName $Computername -ScriptBlock {
+            $Job = Get-OBJob -Previous 1
+            $Job.JobStatus.DatasourceStatus | %{
+                [PSCustomObject][Ordered]@{
+                    StartTime = $Job.JobStatus.StartTime
+                    EndTime = $Job.JobStatus.EndTime
+                    Datasource = $_.Datasource.DatasourceName
+                    ProgressGB = [Math]::Round($_.ByteProgress.Progress / 1GB)
+                    JobState = $_.JobState
+                } | select StartTime,EndTime,Datasource,ProgressGB,JobState
+            }
         }
     }
 }
